@@ -7,10 +7,10 @@ class Bandit:
     def __init__(self, bandit_id: str, arm_ids: List[str]):
         self.bandit_id = bandit_id # name of the bandit to be displayed
         self.arm_ids = arm_ids # list od IDs of all the existing arms
-    
+
     def recommend(self, size: int) -> List[str]: # method should return list of the size `size` containing recommended items from arm_ids
         raise NotImplementedError()
-    
+
     def feedback(self, arm_id: str, payout: float): # helper method - bandit gets results of its recommendation and can store the results
         raise NotImplementedError()
 
@@ -36,7 +36,7 @@ class Runner:
     def __init__(self, arms: Dict[str, Arm], bandits: List[Bandit]):
         self.arms = arms
         self.bandits = bandits
-    
+
     # this method runs each and every bandit algorithm `runs` times, for given `epochs` in each run
     # and returns all the results and payouts which then can be plotted by the latter method
     def simulate(self, runs: int, epochs: int, recommendation_size: int) -> Dict[str, List[List[float]]]:
@@ -60,7 +60,7 @@ class Runner:
                     run_results.append(epoch_payout)
                 results[bandit.bandit_id].append(run_results)
         return results
-    
+
     def plot_results(self, results: Dict[str, List[List[float]]], runs: int, epochs: int, mode='cumulative', scale='linear'):
         average = {bandit_id: [] for bandit_id in results}
         cumulative = {bandit_id: [] for bandit_id in results}
@@ -69,14 +69,14 @@ class Runner:
                 epoch_results = []
                 for r in range(runs):
                     epoch_results.append(results[bandit_id][r][e])
-                
+
                 avg_result = sum(epoch_results) / runs
                 average[bandit_id].append(avg_result)
                 if e == 0:
                     cumulative[bandit_id].append(avg_result)
                 else:
                     cumulative[bandit_id].append(avg_result + cumulative[bandit_id][-1])
-        
+
         if mode == 'cumulative':
             self.print_aggregated_results(cumulative)
             for bandit_id in cumulative:
@@ -85,7 +85,7 @@ class Runner:
             self.print_aggregated_results(average)
             for bandit_id in average:
                 plt.plot(average[bandit_id], label=bandit_id)
-        
+
         plt.yscale(scale)
         plt.legend()
         plt.show()
