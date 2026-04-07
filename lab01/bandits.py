@@ -1,40 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
-from abc import abstractmethod
-from itertools import accumulate
-from collections import defaultdict
 import random
-import math
-from typing import Protocol
+from itertools import accumulate
 
-# environment
-class KArmedBandit(Protocol):
-    @abstractmethod
-    def arms(self) -> list[str]:
-        raise NotImplementedError
+from egreedy_bandit import EGreedyLearner
+from explore_then_commit_bandit import ExploreThenCommitLearner
+from thompson_sampling_bandit import ThompsonSamplingLearner
+from ucb_bandit import UCBLearner
+from gradient_bandit import GradientLearner
 
-    @abstractmethod
-    def reward(self, arm: str) -> float:
-        raise NotImplementedError
-
-# strategy
-class BanditLearner(Protocol):
-    name: str
-    color: str
-
-    @abstractmethod
-    def reset(self, arms: list[str], time_steps: int):
-        raise NotImplementedError
-
-    @abstractmethod
-    def pick_arm(self) -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    def acknowledge_reward(self, arm: str, reward: float) -> None:
-        pass
-
+from environment import BanditLearner, KArmedBandit
 
 class BanditProblem:
     def __init__(self, time_steps: int, bandit: KArmedBandit, learner: BanditLearner):
@@ -61,7 +36,6 @@ POTENTIAL_HITS = {
     "Dirge for November": 0.1,
 }
 
-
 class TopHitBandit(KArmedBandit):
     def __init__(self, potential_hits: dict[str, float]):
         self.potential_hits: dict[str, float] = potential_hits
@@ -72,7 +46,7 @@ class TopHitBandit(KArmedBandit):
     def reward(self, arm: str) -> float:
         thumb_up_probability = self.potential_hits[arm]
         return 1.0 if random.random() <= thumb_up_probability else 0.0
-
+#
 
 class RandomLearner(BanditLearner):
     def __init__(self):
@@ -88,156 +62,7 @@ class RandomLearner(BanditLearner):
 
     def acknowledge_reward(self, arm: str, reward: float) -> None:
         pass
-
-class EGreedyLearner(BanditLearner):
-    def __init__(self, eps: float = 0.1):
-        self.name = "e-greedy"
-        self.color = "blue"
-        self.eps: float = eps
-
-        self.arms: list[str] = []
-        self.counts: dict[str, int] = {}
-        self.expected_values: dict[str, float] = {}
-    #
-    def reset(self, arms: list[str], time_steps: int):
-        self.arms = arms
-        self.counts = {arm: 0 for arm in arms}
-        self.expected_values = {arm: 0.0 for arm in arms}
-    #
-
-    def pick_arm(self) -> str:
-        choice = random.random()
-
-        if choice < self.eps:
-            return random.choice(self.arms)
-
-        # return max(self.expected_values, key=self.expected_values.get)
-        max_expected_value = max(self.expected_values.values())
-        best_arms = [arm for arm in self.arms if self.expected_values[arm] == max_expected_value]
-        return random.choice(best_arms)
-    #
-
-    def acknowledge_reward(self, arm: str, reward: float) -> None:
-        self.counts[arm] = 1 + self.counts[arm]
-        self.expected_values[arm] = self.expected_values[arm] + (reward - self.expected_values[arm]) / self.counts[arm]
-    #
-# end class
-
-class ExploreThenCommitLearner(BanditLearner):
-    def __init__(self, m: int = 5):
-        self.m = m
-        self.name = "explore-then-commit"
-        self.color = "red"
-
-        self.arms: list[str] = []
-        self.counts: dict[str, int] = {}
-        self.expected_values: dict[str, float] = {}
-        self.round: int = 0
-        self.k: int = 0
-
-    #
-    def reset(self, arms: list[str], time_steps: int):
-        self.arms = arms
-        self.counts = {arm: 0 for arm in arms}
-        self.expected_values = {arm: 0.0 for arm in arms}
-        self.round = 0
-        self.k = len(arms)
-    #
-
-    def pick_arm(self) -> str:
-        if self.round  <= self.m * self.k:
-            return self.arms[self.round % self.k]
-
-        max_expected_value = max(self.expected_values.values())
-        best_arms = [arm for arm in self.arms if self.expected_values[arm] == max_expected_value]
-        return random.choice(best_arms)
-    #
-
-    def acknowledge_reward(self, arm: str, reward: float) -> None:
-        self.counts[arm] = 1 + self.counts[arm]
-        self.expected_values[arm] = self.expected_values[arm] + (reward - self.expected_values[arm]) / self.counts[arm]
-        self.round += 1
-    #
-# end class
-
-class UCB(BanditLearner):
-    def __init__(self, c: int = 0.5):
-        self.c = c
-        self.name = "upper-confidence-bound"
-        self.color = "orange"
-
-        self.arms: list[str] = []
-        self.counts: dict[str, int] = {}
-        self.expected_values: dict[str, float] = {}
-        self.round: int = 0
-
-    #
-    def reset(self, arms: list[str], time_steps: int):
-        self.arms = arms
-        self.counts = {arm: 0 for arm in arms}
-        self.expected_values = {arm: 0.0 for arm in arms}
-        self.round = 0
-    #
-
-    def pick_arm(self) -> str:
-        for arm in self.arms:
-            if self.counts[arm] == 0:
-                return arm
-        #
-
-        ucb = [
-            (
-                arm,
-                self.expected_values[arm] + self.c * np.sqrt(np.log(self.round) / self.counts[arm])
-            )
-            for arm in self.arms
-        ]
-
-        max_ucb = max(val for _, val in ucb)
-        best_arms = [arm for arm, val in ucb if val == max_ucb]
-        return random.choice(best_arms)
-    #
-
-    def acknowledge_reward(self, arm: str, reward: float) -> None:
-        self.counts[arm] = 1 + self.counts[arm]
-        self.expected_values[arm] = self.expected_values[arm] + (reward - self.expected_values[arm]) / self.counts[arm]
-        self.round += 1
-    #
-# end class
-
-class ThompsonSampling(BanditLearner):
-    def __init__(self):
-        self.name = "thompson-sampling"
-        self.color = "magenta"
-
-        self.arms: list[str] = []
-        self.counts: dict[str, int] = {}
-
-        self.alphas: dict[str, float] = {}
-        self.betas: dict[str, float] = {}
-
-    #
-    def reset(self, arms: list[str], time_steps: int):
-        self.arms = arms
-        self.counts = {arm: 0 for arm in arms}
-
-        self.alphas = {arm: 1 for arm in arms}
-        self.betas = {arm: 1 for arm in arms}
-    #
-
-    def pick_arm(self) -> str:
-        samples = {arm: np.random.beta(self.alphas[arm], self.betas[arm]) for arm in self.arms}
-        return max(samples, key=samples.get)
-    #
-
-    def acknowledge_reward(self, arm: str, reward: float) -> None:
-        self.counts[arm] = 1 + self.counts[arm]
-        if reward == 1.0:
-            self.alphas[arm] += 1
-        else:
-            self.betas[arm] += 1
-    #
-# end class
+#
 
 TIME_STEPS = 1000
 TRIALS_PER_LEARNER = 50
@@ -269,8 +94,9 @@ def main():
         RandomLearner(),
         EGreedyLearner(),
         ExploreThenCommitLearner(m = 25),
-        UCB(c=0.1),
-        ThompsonSampling()
+        UCBLearner(c=0.1),
+        ThompsonSamplingLearner(),
+        GradientLearner(alpha=0.1)
     ]
     for learner in learners:
         evaluate_learner(learner)
