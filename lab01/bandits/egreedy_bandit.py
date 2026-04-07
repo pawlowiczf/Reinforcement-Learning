@@ -1,4 +1,4 @@
-from environment import BanditLearner
+from environment.environment import BanditLearner
 
 import numpy as np
 import random

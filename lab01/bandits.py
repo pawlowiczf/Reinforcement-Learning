@@ -3,13 +3,13 @@ import numpy as np
 import random
 from itertools import accumulate
 
-from egreedy_bandit import EGreedyLearner
-from explore_then_commit_bandit import ExploreThenCommitLearner
-from thompson_sampling_bandit import ThompsonSamplingLearner
-from ucb_bandit import UCBLearner
-from gradient_bandit import GradientLearner
+from bandits.egreedy_bandit import EGreedyLearner
+from bandits.explore_then_commit_bandit import ExploreThenCommitLearner
+from bandits.thompson_sampling_bandit import ThompsonSamplingLearner
+from bandits.ucb_bandit import UCBLearner
+from bandits.gradient_bandit import GradientLearner
 
-from environment import BanditLearner, KArmedBandit
+from environment.environment import BanditLearner, KArmedBandit
 
 class BanditProblem:
     def __init__(self, time_steps: int, bandit: KArmedBandit, learner: BanditLearner):
@@ -80,13 +80,13 @@ def evaluate_learner(learner: BanditLearner) -> None:
     mean_accumulated_rewards = np.mean(runs_results, axis=0)
     std_accumulated_rewards = np.std(runs_results, axis=0)
     plt.plot(mean_accumulated_rewards, label=learner.name, color=learner.color)
-    plt.fill_between(
-        range(len(mean_accumulated_rewards)),
-        mean_accumulated_rewards - std_accumulated_rewards,
-        mean_accumulated_rewards + std_accumulated_rewards,
-        color=learner.color,
-        alpha=0.2,
-    )
+    # plt.fill_between(
+    #     range(len(mean_accumulated_rewards)),
+    #     mean_accumulated_rewards - std_accumulated_rewards,
+    #     mean_accumulated_rewards + std_accumulated_rewards,
+    #     color=learner.color,
+    #     alpha=0.2,
+    # )
 #
 
 def main():

@@ -1,4 +1,4 @@
-from environment import BanditLearner
+from environment.environment import BanditLearner
 
 import numpy as np
 import random
@@ -7,7 +7,7 @@ import math
 class GradientLearner(BanditLearner):
     def __init__(self, alpha: float = 0.1):
         self.name = "gradient"
-        self.color = "red"
+        self.color = "brown"
         self.alpha: float = alpha
 
         self.arms: list[str] = []
