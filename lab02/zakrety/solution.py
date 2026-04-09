@@ -37,14 +37,20 @@ class OffPolicyNStepSarsaDriver(Driver):
         self.current_step: int = 0
         self.final_step: int = ALMOST_INFINITE_STEP
         self.finished: bool = False
+        self.evaluation_mode: bool = False
         self.states: dict[int, State] = dict()
         self.actions: dict[int, Action] = dict()
         self.rewards: dict[int, int] = dict()
 
+    def _policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
+        if self.evaluation_mode:
+            return self.greedy_policy(state, actions)
+        return self.epsilon_greedy_policy(state, actions)
+
     def start_attempt(self, state: State) -> Action:
         self.current_step = 0
         self.states[self._access_index(self.current_step)] = state
-        action = self._select_action(self.epsilon_greedy_policy(state, available_actions(state)))
+        action = self._select_action(self._policy(state, available_actions(state)))
         self.actions[self._access_index(self.current_step)] = action
         self.final_step = ALMOST_INFINITE_STEP
         self.finished = False
@@ -58,7 +64,7 @@ class OffPolicyNStepSarsaDriver(Driver):
                     last_reward == 0 or self.current_step == MAX_LEARNING_STEPS
             ):
                 self.final_step = self.current_step
-            action = self._select_action(self.epsilon_greedy_policy(state, available_actions(state)))
+            action = self._select_action(self._policy(state, available_actions(state)))
             self.actions[self._access_index(self.current_step + 1)] = action
         else:
             action = Action(0, 0)
@@ -161,23 +167,38 @@ def main() -> None:
     #     number_of_episodes=100,
     # )
 
+    driver = OffPolicyNStepSarsaDriver(
+        step_no=2,
+        step_size=0.3,
+        experiment_rate=0.1,
+        discount_factor=1.00,
+    )
+
     experiment = Experiment(
         environment=Environment(
             corner=Corner(
-                name='corner_b'
+                name='corner_c'
             ),
             steering_fail_chance=0.01,
         ),
-        driver=OffPolicyNStepSarsaDriver(
-            step_no=5,
-            step_size=0.3,
-            experiment_rate=0.05,
-            discount_factor=1.00,
-        ),
+        driver=driver,
         number_of_episodes=30000,
     )
 
     experiment.run()
+
+    driver.evaluation_mode = True
+    eval_experiment = Experiment(
+        environment=Environment(
+            corner=Corner(
+                name='corner_c'
+            ),
+            steering_fail_chance=0.01,
+        ),
+        driver=driver,
+        number_of_episodes=10,
+    )
+    eval_experiment.run()
 
 
 if __name__ == '__main__':

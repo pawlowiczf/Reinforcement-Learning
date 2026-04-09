@@ -135,11 +135,22 @@ class Environment:
         action = Action(0, 0) if random.random() < self.steering_fail_chance else action
         car.v_x, car.v_y = car.v_x + action.a_x, car.v_y + action.a_y
         next_position = car.next_position()
-        if not self.corner.contains(next_position):
+        if not self._path_is_clear(car.position(), next_position):
             next_position = self._random_start()
             car.v_x, car.v_y = 0, 0
         car.x, car.y = next_position.x, next_position.y
         return 0 if next_position in self.corner.terminal_positions else -1
+
+    def _path_is_clear(self, start: Position, end: Position) -> bool:
+        steps = max(abs(end.x - start.x), abs(end.y - start.y))
+        if steps == 0:
+            return self.corner.contains(end)
+        for i in range(1, steps + 1):
+            x = round(start.x + (end.x - start.x) * i / steps)
+            y = round(start.y + (end.y - start.y) * i / steps)
+            if not self.corner.contains(Position(x, y)):
+                return False
+        return True
 
     def _random_start(self) -> Position:
         return random.sample(list(self.corner.starting_positions), 1)[0]
