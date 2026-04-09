@@ -142,7 +142,7 @@ class Environment:
         return 0 if next_position in self.corner.terminal_positions else -1
 
     def _random_start(self) -> Position:
-        return random.sample(self.corner.starting_positions, 1)[0]
+        return random.sample(list(self.corner.starting_positions), 1)[0]
 
 
 @dataclass

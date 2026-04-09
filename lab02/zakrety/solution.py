@@ -69,7 +69,7 @@ class OffPolicyNStepSarsaDriver(Driver):
             return_value = self._return_value(update_step)
             state_t = self.states[self._access_index(update_step)]
             action_t = self.actions[self._access_index(update_step)]
-            self.q[state_t, action_t] = None  # TODO: Tutaj trzeba zaktualizować tablicę wartościującą akcje Q
+            self.q[state_t, action_t] += self.step_size * return_value_weight * (return_value - self.q[state_t, action_t])  # TODO: Tutaj trzeba zaktualizować tablicę wartościującą akcje Q
 
         if update_step == self.final_step - 1:
             self.finished = True
@@ -77,14 +77,35 @@ class OffPolicyNStepSarsaDriver(Driver):
         self.current_step += 1
         return action
 
+    # G - n-krokowy zwrot zdyskontowany
     def _return_value(self, update_step):
         return_value = 0.0
         # TODO: Tutaj trzeba policzyć zwrot G
+        t = update_step
+        end = min(t + self.step_no, self.final_step)
+        for i in range(t + 1, end + 1):
+            return_value += self.discount_factor ** (i - t - 1) * self.rewards[self._access_index(i)]
+        if t + self.step_no < self.final_step: # bootstraping
+            s = self.states[self._access_index(t + self.step_no)]
+            a = self.actions[self._access_index(t + self.step_no)]
+            return_value += self.discount_factor ** self.step_no * self.q[s, a]
         return return_value
 
+    # p - importance sampling ratio
     def _return_value_weight(self, update_step):
         return_value_weight = 1.0
         # TODO: Tutaj trzeba policzyć korektę na różne prawdopodobieństwa ρ (ponieważ uczymy poza-polityką)
+
+        t = update_step
+        end = min(t + self.step_no, self.final_step)
+        for i in range(t + 1, end):
+            s_i = self.states[self._access_index(i)]
+            a_i = self.actions[self._access_index(i)]
+            actions = available_actions(s_i)
+
+            pi = self.greedy_policy(s_i, actions)[a_i]
+            b = self.epsilon_greedy_policy(s_i, actions)[a_i]
+            return_value_weight *= pi / b
         return return_value_weight
 
     def finished_learning(self) -> bool:
@@ -100,10 +121,15 @@ class OffPolicyNStepSarsaDriver(Driver):
         i = np.random.choice(list(range(len(actions))), p=probabilities)
         return actions[i]
 
+    # behaviour-policy (b)
     def epsilon_greedy_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
         probabilities = None  # TODO: tutaj trzeba ustalic prawdopodobieństwa wyboru akcji według polityki ε-zachłannej
+        greedy = self._greedy_probabilities(state, actions)
+        random_prob = self._random_probabilities(actions)
+        probabilities = (1 - self.experiment_rate) * greedy + self.experiment_rate * random_prob
         return {action: probability for action, probability in zip(actions, probabilities)}
 
+    # target-policy (π)
     def greedy_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
         probabilities = self._greedy_probabilities(state, actions)
         return {action: probability for action, probability in zip(actions, probabilities)}
@@ -124,17 +150,6 @@ class OffPolicyNStepSarsaDriver(Driver):
 
 
 def main() -> None:
-    experiment = Experiment(
-        environment=Environment(
-            corner=Corner(
-                name='corner_b'
-            ),
-            steering_fail_chance=0.01,
-        ),
-        driver=RandomDriver(),
-        number_of_episodes=100,
-    )
-
     # experiment = Experiment(
     #     environment=Environment(
     #         corner=Corner(
@@ -142,14 +157,25 @@ def main() -> None:
     #         ),
     #         steering_fail_chance=0.01,
     #     ),
-    #     driver=OffPolicyNStepSarsaDriver(
-    #         step_no=5,
-    #         step_size=0.3,
-    #         experiment_rate=0.05,
-    #         discount_factor=1.00,
-    #     ),
-    #     number_of_episodes=30000,
+    #     driver=RandomDriver(),
+    #     number_of_episodes=100,
     # )
+
+    experiment = Experiment(
+        environment=Environment(
+            corner=Corner(
+                name='corner_b'
+            ),
+            steering_fail_chance=0.01,
+        ),
+        driver=OffPolicyNStepSarsaDriver(
+            step_no=5,
+            step_size=0.3,
+            experiment_rate=0.05,
+            discount_factor=1.00,
+        ),
+        number_of_episodes=30000,
+    )
 
     experiment.run()
 
