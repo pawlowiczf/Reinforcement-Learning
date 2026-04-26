@@ -1,6 +1,6 @@
 ## Implementacja SARSA
 
-Zaimplementowałem funkcje do liczenia n-krokowego zwrotu zdyskontowanego oraz importance sampling ratio:
+Zaimplementowałem min. funkcje do liczenia n-krokowego zwrotu zdyskontowanego oraz importance sampling ratio:
 
 ```python
 # G - n-krokowy zwrot zdyskontowany
@@ -39,6 +39,8 @@ Algorytm z sukcesem uczy się przejazdu przez trasę `corner_b`. Poniżej przeds
 
 (plot)[plots_b/track_150.png]
 (plot)[plots_b/track_750.png]
+
+Trasa według optymalnej polityki (target policy)
 (plot)[plots_b/track_29600.png]
 
 Podczas początkowych prac pojawił się problem, że samochód przejeżdżał przez sciany, ponieważ sprawdzał tylko, czy `car.next_position()` znajduje się na mapie, ale nie, czy piksele przez, które przechodzi też stanowią drogę. Narzędzia sztucznej inteligencji poradziły, by użyć prostego algorytmu sprawdzającego, czy na tej lini znajduje się przeszkoda, np. algorytm `DDA Line Drawing Algorithm`.
@@ -47,6 +49,14 @@ Podczas początkowych prac pojawił się problem, że samochód przejeżdżał p
 
 `corner_c` był już wiekszym problemem dla algorytmu. Pierwotna nauka trwała bardzo długo, zanim tak naprawdę algorytm odkrył drogę do mety - meta znajduje się znacznie dalej. Musiałem też na wybrać inne parametry, ustawiłem `step_no=5` i `experiment_rate=0.1`. Dla takich parametrów, cały trening (30000 epizodów) trwał około 40 minut. Oto przykładowe trasy, od początkowch, po optymalne. Widać też sporo powrotów na start, po uderzeniach w ścianę.
 
-(plot)[plots_b/track_100.png]
-(plot)[plots_b/track_1600.png]
-(plot)[plots_b/track_29750.png]
+(plot)[plots_c/track_100.png]
+(plot)[plots_c/track_1600.png]
+(plot)[plots_c/track_29750.png]
+
+## Corner D
+Podobnie jak w przypadku `corner_c`, także `corner_d` liczył się dość długo. W tym przypadku zostaiwłem `step_no=2` i `experiment_rate=0.1`. Poniżej przedstawiam początkowe trasy, wraz z optymalną, wyuczoną polityką (target policy)
+
+(plot)[plots_d/track_600.png]
+(plot)[plots_d/track_12800.png]
+Trasa według optymalnej polityki (target policy)
+(plot)[plots_d/track_30000.png]

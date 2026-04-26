@@ -129,7 +129,6 @@ class OffPolicyNStepSarsaDriver(Driver):
 
     # behaviour-policy (b)
     def epsilon_greedy_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
-        probabilities = None  # TODO: tutaj trzeba ustalic prawdopodobieństwa wyboru akcji według polityki ε-zachłannej
         greedy = self._greedy_probabilities(state, actions)
         random_prob = self._random_probabilities(actions)
         probabilities = (1 - self.experiment_rate) * greedy + self.experiment_rate * random_prob
@@ -177,7 +176,7 @@ def main() -> None:
     experiment = Experiment(
         environment=Environment(
             corner=Corner(
-                name='corner_c'
+                name='corner_d'
             ),
             steering_fail_chance=0.01,
         ),
@@ -191,12 +190,13 @@ def main() -> None:
     eval_experiment = Experiment(
         environment=Environment(
             corner=Corner(
-                name='corner_c'
+                name='corner_d'
             ),
             steering_fail_chance=0.01,
         ),
         driver=driver,
-        number_of_episodes=10,
+        number_of_episodes=50,
+        current_episode_no=30000
     )
     eval_experiment.run()
 
