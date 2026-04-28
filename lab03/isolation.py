@@ -1,10 +1,13 @@
 from abc import abstractmethod
+from calendar import c
 from enum import Enum
 import itertools
 import math
 import random
 import time
 from typing import Optional, Protocol
+
+from numpy import c_
 
 
 class Colour(Enum):
@@ -177,7 +180,7 @@ class MCTSNode:
         self.value: float = 0.5
         self.children: dict[tuple[int, int], MCTSNode] = dict()
         self.board: Board = board
-        self.current_player: Colour = current_player
+        self.current_player: Colour = current_player # makes the current move on this board
         self.c_coefficient: float = c_coefficient
 
     def select(self, final=False) -> tuple[int, int]:
@@ -201,6 +204,8 @@ class MCTSNode:
         ucb_values = {}
         for (cx, cy), child in self.children.items():
             ucb_values[(cx, cy)] = (1 - child.value) + self.c_coefficient * math.sqrt(math.log(self.times_chosen) / child.times_chosen)
+            # child.value defines the expected win rate for the opponent (the player whose turn it is in the child node),
+            # so we use (1 - child.value) to get the win rate from the current player's perspective
 
         max_ucb_value = max(ucb_values.values())
         best_actions = [action for action, ucb_value in ucb_values.items() if ucb_value == max_ucb_value]
@@ -299,7 +304,7 @@ class MCTSPlayer(Player):
         self.root_node = new_root
 
 
-def main() -> None:
+def ex01() -> None:
     red_wins = 0
     blue_wins = 0
 
@@ -318,10 +323,84 @@ def main() -> None:
             blue_wins += 1
 
     print(red_wins, blue_wins)  # TODO: jeżeli wszystko poszło dobrze, to agent MCTS powtarzalnie wygrywa z losowym
+#
+
+def ex02() -> None:
+    red_wins = 0
+    blue_wins = 0
+
+    for _ in range(10):
+        board = Board(4,4)
+        red_player = MCTSPlayer(0.2, 0.5)
+        blue_player = MCTSPlayer(0.1, 0.5)
+        game = Game(red_player, blue_player, board)
+        game.run(verbose=False)
+
+        if game.winner == Colour.RED:
+            red_wins += 1
+        else:
+            blue_wins += 1
+
+    print(red_wins, blue_wins)
+#
+
+def ex03() -> None:
+    from visualizations import plot_win_rate_vs_c
+    from isolation import MCTSPlayer
+    plot_win_rate_vs_c(
+        [0.0, 0.2, 0.4, 0.7, 1.0, 1.41, 2.0, 3.0, 5.0],
+        n_games=100,
+        time_limit=0.2,
+        opponent_factory=lambda: MCTSPlayer(0.2, 1.41)
+    )
+#
+
+def ex04() -> None:
+    from visualizations import plot_win_rate_vs_time
+    from isolation import MCTSPlayer
+    plot_win_rate_vs_time(
+        [0.1, 0.2, 0.3, 0.4, 0.5],
+        n_games=100,
+        c_coefficient=1.41,
+        opponent_factory=lambda: MCTSPlayer(0.3, 1.41)
+    )
+#
+
+def ex05() -> None:
+    from visualizations import plot_heatmap_c_vs_time
+    from isolation import MCTSPlayer
+    plot_heatmap_c_vs_time(
+        time_limits=[0.1, 0.2, 0.3, 0.4, 0.5],
+        c_values=[0.0, 0.2, 0.4, 0.7, 1.0, 1.41, 2.0, 3.0],
+        n_games=20,
+        opponent_factory=lambda: MCTSPlayer(0.3, 1.41)
+    )
+
+def ex06() -> None:
+    from visualizations import plot_tournament_matrix
+    plot_tournament_matrix(
+        configs=[
+            {"label": "greedy",      "time": 0.1, "c": 0.0},
+            {"label": "exploit",     "time": 0.1, "c": 0.4},
+            {"label": "balanced",    "time": 0.1, "c": 1.41},
+            {"label": "explorer",    "time": 0.1, "c": 3.0},
+            {"label": "balanced+t",  "time": 0.3, "c": 1.41},
+        ],
+        n_games=20,
+        board_size=(4, 4),
+    )
 
 
 if __name__ == '__main__':
-    main()  # TODO: jeżeli podstawowy eksperyment zakończył się sukcesem to sprawdź inne jego warianty
+    from multiprocessing import Process
+
+    procs = [Process(target=fn) for fn in (ex03, ex04, ex05, ex06)]
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+
+
     # podpowiedź:
     #  * możesz zorganizować pojedynek agentów MCTS o różnych parametrach (np. czasie na wybór akcji)
     #  * możesz też zmienić rozmiar planszy lub skłonność do eksplorowania (`self.c_coefficient`)
