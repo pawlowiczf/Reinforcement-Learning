@@ -37,11 +37,11 @@ def _return_value_weight(self, update_step):
 ## Corner B
 Algorytm z sukcesem uczy się przejazdu przez trasę `corner_b`. Poniżej przedstawiam początkowe epizody (długie przejazdy) oraz te końcowe (z używaniem tylko optymalnej strategii, dodałem na końcu przeprowadzenie kilku ewaluacyjnych epizodów).
 
-(plot)[plots_b/track_150.png]
-(plot)[plots_b/track_750.png]
+![plot](plots_b/track_150.png)
+![plot](plots_b/track_750.png)
 
 Trasa według optymalnej polityki (target policy)
-(plot)[plots_b/track_29600.png]
+![plot](plots_b/track_29600.png)
 
 Podczas początkowych prac pojawił się problem, że samochód przejeżdżał przez sciany, ponieważ sprawdzał tylko, czy `car.next_position()` znajduje się na mapie, ale nie, czy piksele przez, które przechodzi też stanowią drogę. Narzędzia sztucznej inteligencji poradziły, by użyć prostego algorytmu sprawdzającego, czy na tej lini znajduje się przeszkoda, np. algorytm `DDA Line Drawing Algorithm`.
 
@@ -49,14 +49,81 @@ Podczas początkowych prac pojawił się problem, że samochód przejeżdżał p
 
 `corner_c` był już wiekszym problemem dla algorytmu. Pierwotna nauka trwała bardzo długo, zanim tak naprawdę algorytm odkrył drogę do mety - meta znajduje się znacznie dalej. Musiałem też na wybrać inne parametry, ustawiłem `step_no=5` i `experiment_rate=0.1`. Dla takich parametrów, cały trening (30000 epizodów) trwał około 40 minut. Oto przykładowe trasy, od początkowch, po optymalne. Widać też sporo powrotów na start, po uderzeniach w ścianę.
 
-(plot)[plots_c/track_100.png]
-(plot)[plots_c/track_1600.png]
-(plot)[plots_c/track_29750.png]
+![plot](plots_c/track_100.png)
+![plot](plots_c/track_1600.png)
+![plot](plots_c/track_29750.png)
 
 ## Corner D
-Podobnie jak w przypadku `corner_c`, także `corner_d` liczył się dość długo. W tym przypadku zostaiwłem `step_no=2` i `experiment_rate=0.1`. Poniżej przedstawiam początkowe trasy, wraz z optymalną, wyuczoną polityką (target policy)
+Podobnie jak w przypadku `corner_c`, także `corner_d` liczył się dość długo. W tym przypadku zostawiłem `step_no=2` i `experiment_rate=0.1`. Poniżej przedstawiam początkowe trasy, wraz z optymalną, wyuczoną polityką (target policy)
 
-(plot)[plots_d/track_600.png]
-(plot)[plots_d/track_12800.png]
+![plot](plots_d/track_600.png)
+![plot](plots_d/track_12800.png)
+
 Trasa według optymalnej polityki (target policy)
-(plot)[plots_d/track_30000.png]
+![plot](plots_d/track_30000.png)
+
+Finalna trasa robi już wrażenie. Przejazd jest dość spokojny i naturalny.
+
+## Studium parametryczne
+
+Tak jak już wspominałem wcześniej, czas liczenia jest dość długi. Postanowiłem studium parametryczne wykonać, w sposób automatyczny, na klastrze Ares, ponieważ mam do niego dostęp z przedmiotu Large Scale Computing.
+
+```sh
+#!/bin/bash
+#SBATCH --job-name=sarsa-sweep
+#SBATCH --output=sweep-%j.out
+#SBATCH --error=sweep-%j.err
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=24
+#SBATCH --mem=8G
+#SBATCH --time=02:00:00
+
+#SBATCH --account=plglscclass26-cpu
+#SBATCH --partition=plgrid
+
+source ~/.bashrc
+conda activate plgpawlowiczfenv
+
+cd $SLURM_SUBMIT_DIR
+srun python parameters_study.py
+```
+
+Kod do studium parametrycznego znajduje się w `parameters_study.py`. Został napisany z pomocą narzędzi sztucznej inteligencji. Zapisuje wyniki obliczeń do pliku CSV, uśrednia wartości `penalties` dla uruchomień ewaluacyjnych. Pierwotnie sprawdzałem SARSE nawet z $n=16$, ale okazuje się, że pojawiają się numeryczne eksplozje (prawdopodobnie podczas liczenia Importance Sampling) - zmniejszyłem zatem do $n=8$. Im większa liczba kroków, tym dłużej trwają obliczenia.
+
+Przykładowy wykres parametryczny dla `corner_b`:
+![plot](parameters/parametric_study1.png)
+
+Dość dobrze poradziła sobie kombinacja `step_no` $=4$ i `step_size` $=0.1$.
+
+Przykładowy wykres parametryczny dla `corner_d`:
+
+## Polityka pędzenia do przodu
+
+Do konstruktora klasy `OffPolicyNStepSarsaDriver` dodałem nowy parametr `behaviour`, który służy do podmiany polityki $b$: `epsilon` lub `rush`. Dzięki temu, dodałem metodę, która wybiera daną politykę np. podczas liczenia Importance Sampling:
+
+```py
+def behavior_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
+    if self.behavior == "rush":
+        return self.rushing_forward_policy(state, actions)
+    return self.epsilon_greedy_policy(state, actions)
+```
+
+Implementacja wygląda podobnie, jak w przypakdu polityki `epsilon-greedy`. Do czynnika `greedy` dodajemy czynnik, który jest dodatni (różny od zera) dla tych akcji, dla których `a.x==1`. Polityka będzie zatem promować akcje, które oznaczają przyspieszenie w dół.
+```py
+# rushing-forward-policy
+def rushing_forward_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
+    greedy = self._greedy_probabilities(state, actions)
+    rush = self._rush_probabilities(actions)
+    probabilities = (1 - self.experiment_rate) * greedy + self.experiment_rate * rush
+    return {action: probability for action, probability in zip(actions, probabilities)}
+
+def _rush_probabilities(actions: list[Action]) -> np.ndarray:
+    forward = np.array([1.0 if a.a_x == 1 else 0.0 for a in actions])
+    if forward.sum() == 0:
+        # edge case, fallback
+        forward = np.ones(len(actions))
+    return OffPolicyNStepSarsaDriver._normalise(forward)
+```
+
+25650

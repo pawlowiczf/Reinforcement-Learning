@@ -28,11 +28,14 @@ class RandomDriver(Driver):
 
 
 class OffPolicyNStepSarsaDriver(Driver):
-    def __init__(self, step_size: float, step_no: int, experiment_rate: float, discount_factor: float) -> None:
+    def __init__(self, step_size: float, step_no: int, experiment_rate: float, discount_factor: float,
+                 behavior: str = "epsilon", importance_sampling: bool = True) -> None:
         self.step_size: float = step_size
         self.step_no: int = step_no
         self.experiment_rate: float = experiment_rate
         self.discount_factor: float = discount_factor
+        self.behavior: str = behavior
+        self.importance_sampling: bool = importance_sampling
         self.q: dict[tuple[State, Action], float] = collections.defaultdict(float)
         self.current_step: int = 0
         self.final_step: int = ALMOST_INFINITE_STEP
@@ -45,6 +48,12 @@ class OffPolicyNStepSarsaDriver(Driver):
     def _policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
         if self.evaluation_mode:
             return self.greedy_policy(state, actions)
+        return self.behavior_policy(state, actions)
+
+    # b - chooses the proper behavior policy
+    def behavior_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
+        if self.behavior == "rush":
+            return self.rushing_forward_policy(state, actions)
         return self.epsilon_greedy_policy(state, actions)
 
     def start_attempt(self, state: State) -> Action:
@@ -77,7 +86,7 @@ class OffPolicyNStepSarsaDriver(Driver):
             action_t = self.actions[self._access_index(update_step)]
             self.q[state_t, action_t] += self.step_size * return_value_weight * (return_value - self.q[state_t, action_t])  # TODO: Tutaj trzeba zaktualizować tablicę wartościującą akcje Q
 
-        if update_step == self.final_step - 1:
+        if update_step >= self.final_step - 1:
             self.finished = True
 
         self.current_step += 1
@@ -99,6 +108,8 @@ class OffPolicyNStepSarsaDriver(Driver):
 
     # p - importance sampling ratio
     def _return_value_weight(self, update_step):
+        if not self.importance_sampling:
+            return 1.0  # off — naive n-step SARSA bez korekty na różnice π vs b
         return_value_weight = 1.0
         # TODO: Tutaj trzeba policzyć korektę na różne prawdopodobieństwa ρ (ponieważ uczymy poza-polityką)
 
@@ -110,7 +121,12 @@ class OffPolicyNStepSarsaDriver(Driver):
             actions = available_actions(s_i)
 
             pi = self.greedy_policy(s_i, actions)[a_i]
-            b = self.epsilon_greedy_policy(s_i, actions)[a_i]
+            if pi == 0.0:
+                # π(a) = 0 → cała trajektoria ma zerowe prawdopodobieństwo pod π,
+                # więc ρ = 0. Pod ε-greedy ten warunek nie był potrzebny (b > 0
+                # zawsze), pod rush b = 0 wtedy gdy π = 0 → 0/0 = NaN.
+                return 0.0
+            b = self.behavior_policy(s_i, actions)[a_i]
             return_value_weight *= pi / b
         return return_value_weight
 
@@ -134,6 +150,13 @@ class OffPolicyNStepSarsaDriver(Driver):
         probabilities = (1 - self.experiment_rate) * greedy + self.experiment_rate * random_prob
         return {action: probability for action, probability in zip(actions, probabilities)}
 
+    # rushing-forward-policy
+    def rushing_forward_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
+        greedy = self._greedy_probabilities(state, actions)
+        rush = self._rush_probabilities(actions)
+        probabilities = (1 - self.experiment_rate) * greedy + self.experiment_rate * rush
+        return {action: probability for action, probability in zip(actions, probabilities)}
+
     # target-policy (π)
     def greedy_policy(self, state: State, actions: list[Action]) -> dict[Action, float]:
         probabilities = self._greedy_probabilities(state, actions)
@@ -143,6 +166,14 @@ class OffPolicyNStepSarsaDriver(Driver):
         values = [self.q[state, action] for action in actions]
         maximal_spots = (values == np.max(values)).astype(float)
         return self._normalise(maximal_spots)
+
+    @staticmethod
+    def _rush_probabilities(actions: list[Action]) -> np.ndarray:
+        forward = np.array([1.0 if a.a_x == 1 else 0.0 for a in actions])
+        if forward.sum() == 0:
+            # już max v_x — żeby b > 0 dla wszystkich akcji, fallback na jednostajny
+            forward = np.ones(len(actions))
+        return OffPolicyNStepSarsaDriver._normalise(forward)
 
     @staticmethod
     def _random_probabilities(actions: list[Action]) -> np.ndarray:
@@ -171,12 +202,16 @@ def main() -> None:
         step_size=0.3,
         experiment_rate=0.1,
         discount_factor=1.00,
+        behavior='rush',
+        importance_sampling=False
     )
+
+    CORNER='corner_c'
 
     experiment = Experiment(
         environment=Environment(
             corner=Corner(
-                name='corner_d'
+                name=CORNER
             ),
             steering_fail_chance=0.01,
         ),
@@ -190,7 +225,7 @@ def main() -> None:
     eval_experiment = Experiment(
         environment=Environment(
             corner=Corner(
-                name='corner_d'
+                name=CORNER
             ),
             steering_fail_chance=0.01,
         ),
