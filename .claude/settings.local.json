@@ -5,7 +5,9 @@
       "Bash(python -c ' *)",
       "Bash(python -c \"import visualizations; print\\('OK'\\)\")",
       "Bash(rm c:/Users/Filip/Desktop/UMISI/Reinforcement-Learning/lab03/images/_test_c.png c:/Users/Filip/Desktop/UMISI/Reinforcement-Learning/lab03/images/_test_t.png)",
-      "Read(//c/Users/Filip/AppData/Local/Temp/claude/c--Users-Filip-Desktop-UMISI-Reinforcement-Learning/0914358c-0809-4a64-9a9c-a16e80637e05/tasks/**)"
+      "Read(//c/Users/Filip/AppData/Local/Temp/claude/c--Users-Filip-Desktop-UMISI-Reinforcement-Learning/0914358c-0809-4a64-9a9c-a16e80637e05/tasks/**)",
+      "Bash(grep -E \"^penalties_\\(29[0-9]+|30000\\)\\\\.png$\")",
+      "Bash(grep -E \"^track_\\(29[0-9]+|30000\\)\\\\.png$\")"
     ]
   }
 }

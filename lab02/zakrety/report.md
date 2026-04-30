@@ -97,6 +97,8 @@ Przykładowy wykres parametryczny dla `corner_b`:
 Dość dobrze poradziła sobie kombinacja `step_no` $=4$ i `step_size` $=0.1$.
 
 Przykładowy wykres parametryczny dla `corner_d`:
+![plot](parameters/parametric_study2_partial.png)
+Tutaj podobnie, jak wcześniej, pojawiły się probly numeryczne przy IS - obliczenia zakończyłem na $n=4$ i $\alpha=0.6$.
 
 ## Polityka pędzenia do przodu
 
@@ -126,4 +128,9 @@ def _rush_probabilities(actions: list[Action]) -> np.ndarray:
     return OffPolicyNStepSarsaDriver._normalise(forward)
 ```
 
-25650
+Wykres ruchu takiego pojazdu, przy tej polityce, będzie wykazywał tendencję do przyspieszania w dół, co oznacza gorsze radzenie sobie przy zakrętach (bo wtedy należy wyhamowoać i skręcić). Przykładowo wykres ruchu:
+![plot](plots_c_rush/track_25650.png)
+
+Jeśli chodzi o nie liczenie IS, to do konstruktora dodałem flagę `self.importance_sampling: bool`. Wyłączenie IS oznacza, że współczynnik $\rho$ ma zawsze wartość 1.0. W efekcie każda aktualizacja Q wykorzystuje pełną różnicę (G - Q), bez uwzględniania tego, jak bardzo polityka $b$ różni się od $\pi$. Zamiast zbiegać do $Q_{\pi}$, algorytm zbiega do wartości bliższych $Q_{b}$, czyli takich, które odpowiadają polityce $b$. W praktyce oznacza to, że stany-akcje typu "jedź dalej prosto" tuż przed zakrętem dostają niższą wartość, ponieważ przy polityce $b$ często kończyły się wypadkiem. W efekcie końcowa polityka zachłanna (greedy) jest bardziej ostrożna niż w czystym podejściu off-policy z IS.
+
+![plot](plots_c_rush/track_29250.png)
