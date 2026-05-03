@@ -20,6 +20,6 @@ dla aktora trzeba maksymalizowac, zeby mial duzo nagrod, dlatego funkcja dajemy 
 delta jest na plusie, czyli akcja byla lepsza niz sie wydawalo, to poprawiamy prawdopodobienstwo tej akcji
 jak wyjdzie ujemna, to obnizamy pp tej akcji
 
-entropia politykia - 
+entropia politykia -
 
 jak liczy sie entropie w informatyce (czego, bity), jednostka informacji

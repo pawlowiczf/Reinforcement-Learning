@@ -127,8 +127,17 @@ def build_actor_critic_separate(
     Actor-Critic z NIEZALEZNYMI trzonkami — brak wspoldzielonych wag.
     Kazda glowica ma wlasne dwie warstwy ukryte (dwa razy wiecej parametrow).
     """
-    raise NotImplementedError("TODO: zaimplementuj rozlaczne trzonki aktora i krytyka!")
+    obs = keras.Input(shape=(obs_dim,), name="obs")
 
+    a = keras.layers.Dense(hidden[0], activation="tanh", name="actor_fc1")(obs)
+    a = keras.layers.Dense(hidden[1], activation="tanh", name="actor_fc2")(a)
+    logits = keras.layers.Dense(n_actions, name="logits")(a)
+
+    c = keras.layers.Dense(hidden[0], activation="tanh", name="critic_fc1")(obs)
+    c = keras.layers.Dense(hidden[1], activation="tanh", name="critic_fc2")(c)
+    value = keras.layers.Dense(1, name="value")(c)
+
+    return keras.Model(inputs=obs, outputs=[logits, value], name="ActorCritic_Separate")
 
 class ActorCriticController:
     """
@@ -165,16 +174,18 @@ class ActorCriticController:
 
         # TODO: wywolaj model (tryb inferencji) i pobierz logity
         # Podpowiedz: self.model(x, training=False) zwraca..?
-        logits = None
+        logits, _ = self.model(x, training=False)
 
         # TODO: oblicz prawdopodobienstwa akcji za pomoca softmax na logitach
         # Podpowiedz: może pomogą keras.ops..?
-        probs = None
+        probs = keras.ops.softmax(logits)
 
-        # TODO: przekonwertuj prawdopodobienstwa do numpy (przyda sie też metoda ravel i pomocnicze to_numpy), 
+        # TODO: przekonwertuj prawdopodobienstwa do numpy (przyda sie też metoda ravel i pomocnicze to_numpy),
         # znormalizuj dla bezpieczenstwa (podziel przez sume) i wylosuj akcje uzywajac np.random.choice
         # Podpowiedz: astype(np.float64) często ratuje sytuację...
-        action = 0
+        probs_np = to_numpy(probs).ravel().astype(np.float64)
+        probs_np = probs_np / probs_np.sum()
+        action = np.random.choice(len(probs_np), p=probs_np)
 
         self.last_action = action
         return action
@@ -201,31 +212,37 @@ class ActorCriticController:
 
         # TODO: oblicz cel TD (target)
         # Podpowiedz: nie zapomnij o keras.ops.stop_gradient...
+        _, value_s_next = self.model(x_s_next, training=False)
+        v_s_next = value_s_next[0, 0]
+
         r = keras.ops.cast(reward, "float32")
-        target = r  # TODO: zastap poprawna formula
+        target = r + self.gamma * (1.0 - terminal) * keras.ops.stop_gradient(v_s_next)
 
         # TODO: oblicz blad TD (delta = target - V(s)) i zapisz jego kwadrat
         # do self.last_error_squared (przydatne do wykresow)
         # Podpowiedz: a tu się przyda keras.ops.square...
-        error = keras.ops.cast(0.0, "float32")  # TODO: zastap poprawna formula
-        self.last_error_squared = 0.0
+        error = target - v_s  # TODO: zastap poprawna formula
+        self.last_error_squared = float(keras.ops.square(error))
 
         # TODO: oblicz strate krytyka jako kwadrat bledu TD
-        critic_loss = keras.ops.cast(0.0, "float32")
+        critic_loss = keras.ops.cast(keras.ops.square(error), "float32")
 
         # TODO: oblicz log-prawdopodobienstwa akcji (log-softmax)
         # Podpowiedz: log_probs = logits_s - keras.ops.logsumexp...
         # Nastepnie wybierz log-prawdopodobienstwo konkretnej wybranej akcji
-        log_prob_a = keras.ops.cast(0.0, "float32")
+        log_probs  = logits_s - keras.ops.logsumexp(logits_s, axis=-1, keepdims=True)
+        log_prob_a = log_probs[0, action]
 
         # TODO: oblicz strate aktora (policy gradient)
         # Podpowiedz: tu tez sie przyda keras.ops.stop_gradient...
-        actor_loss = keras.ops.cast(0.0, "float32")
+        actor_loss = -log_prob_a * keras.ops.stop_gradient(error)
 
         # TODO: oblicz bonus z entropii
         # i mnoz przez -entropy_coeff (maksymalizacja entropii = minimalizacja -entropii)
         # Podpowiedz: log_probs zostalo juz obliczone powyzej...
-        entropy_loss = keras.ops.cast(0.0, "float32")
+        probs = keras.ops.softmax(logits_s)
+        entropy = -keras.ops.sum(probs * log_probs)
+        entropy_loss = -self.entropy_coeff * entropy
 
         return critic_loss + actor_loss + entropy_loss
 
