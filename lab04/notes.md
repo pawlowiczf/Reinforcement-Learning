@@ -23,3 +23,7 @@ jak wyjdzie ujemna, to obnizamy pp tej akcji
 entropia politykia -
 
 jak liczy sie entropie w informatyce (czego, bity), jednostka informacji
+
+----------------
+
+# 
