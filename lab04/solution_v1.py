@@ -313,7 +313,7 @@ def train(env_name: str = "cartpole", resume_path: str | None = None) -> None:
             done = terminated or truncated
 
             reward = float(reward)
-            agent.learn(state, reward, next_state, done)
+            agent.learn(state, reward, next_state, terminated)
 
             state = next_state
             reward_sum += reward

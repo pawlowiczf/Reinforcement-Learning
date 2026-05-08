@@ -1,0 +1,52 @@
+sbatch run_slurm.sh 
+sinfo
+
+scancel 20007119
+sbatch run.sh
+
+sbatch --account=plglscclass26-cpu --partition=plgrid run_slurm.sh
+
+squeue -u $USER
+tail -f sweep-<ID>.out
+
+srun -p plgrid-testing -A plglscclass26-cpu --time 0:30:00 --cpus-per-task=2 --pty /bin/bash -l
+srun -p plgrid -A plglscclass26-cpu --time 02:00:00 --nodes=1 --ntasks=1 --cpus-per-task=24 --mem=8G --pty /bin/bash -l
+
+python -c "
+from parameters_study import _plot, CSV_PATH, PLOT_PATH
+_plot(CSV_PATH, PLOT_PATH)
+print(f'wrote {PLOT_PATH}')
+"
+
+srun -p plgrid-gpu-a100 \
+     -A plglscclass26-gpu-a100 \
+     --time 02:00:00 \
+     --nodes=1 \
+     --ntasks=1 \
+     --cpus-per-task=12 \
+     --mem=16G \
+     --gres=gpu:a100:1 \
+     --pty /bin/bash -l
+
+pip install numpy==1.26.4
+pip install keras==3.14.0
+pip install tqdm==4.67.3
+pip install matplotlib==3.10.8
+pip install pygame==2.6.1
+pip install swig==4.4.1
+pip install click==8.3.2
+
+python solution_v1.py --env cartpole --render .\cart_pole_trained_v1\cartpole_checkpoint_ep500.keras
+
+mkdir -p $SCRATCH/.conda/envs
+mkdir -p $SCRATCH/.conda/pkgs
+
+conda config --add envs_dirs ${SCRATCH}/.conda/envs
+conda config --add pkgs_dirs ${SCRATCH}/.conda/pkgs
+
+conda create -n plgpawlowiczfenv python=3.11 numpy pandas matplotlib
+
+conda activate $SCRATCH/.conda/envs/plgpawlowiczfenv
+echo $CONDA_DEFAULT_ENV # make sure the environment is active
+
+conda install seaborn jupyter # new packages are installed in the active environment
