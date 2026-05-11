@@ -139,8 +139,6 @@ class DictReplayBuffer(BaseBuffer):
         )
 
 
-
-
 class HerReplayBuffer(DictReplayBuffer):
     def __init__(
         self,
@@ -154,11 +152,8 @@ class HerReplayBuffer(DictReplayBuffer):
         self.env = env
         self.n_sampled_goal = n_sampled_goal
         self.selection_strategy = goal_selection_strategy
-        # TODO: fill this in
-        # You can put additional attributes here if needed.
-        # Also: There is a number of methods in the base class that could be useful to override.
+        self._start_ptr: int = 0
 
-   
     def store(
         self,
         observation: dict[str, torch.Tensor],
@@ -169,10 +164,6 @@ class HerReplayBuffer(DictReplayBuffer):
         truncated: bool,
         info: dict[str, Any],
     ):
-        # TODO: fill this in
-        # Just a suggestion: it may make sense to modify this method
-        
-        # Store the transition
         super().store(
             observation=observation,
             action=action,
@@ -183,12 +174,66 @@ class HerReplayBuffer(DictReplayBuffer):
             info=info,
         )
 
-        # TODO: fill this in
-        # Or maybe here?
+    def start_episode(self):
+        self._start_ptr = self._ptr
 
+    def end_episode(self):
+        if self._start_ptr <= self._ptr:
+            idx = np.arange(self._start_ptr, self._ptr)
+        else:
+            idx = np.concatenate(
+                (np.arange(self._start_ptr, self.max_size), np.arange(self._ptr))
+            )
 
+        if len(idx) == 0:
+            return
 
+        episode = self.batch(idx)
+        self._augment(episode)
 
+    def _augment(self, episode: dict[str, Union[Tensor, dict[str, Tensor]]]):
+        T = len(episode["info"])
+        n_goals = 1 if self.selection_strategy == "final" else self.n_sampled_goal
 
+        for curr_idx in range(T):
+            action = episode["action"][curr_idx]
+            achieved_curr = episode["next_observation"]["achieved_goal"][curr_idx]
+            info_curr = episode["info"][curr_idx]
+            truncated_curr = bool(episode["truncated"][curr_idx])
 
+            for _ in range(n_goals):
+                if self.selection_strategy == "final":
+                    next_idx = T - 1
+                elif self.selection_strategy == "future":
+                    if curr_idx == T - 1:
+                        break
+                    next_idx = np.random.randint(curr_idx + 1, T)
+                else:
+                    raise NotImplementedError(self.selection_strategy)
 
+                new_goal = episode["next_observation"]["achieved_goal"][next_idx]
+
+                new_obs = {
+                    k: v[curr_idx] for k, v in episode["observation"].items()
+                }
+                new_next_obs = {
+                    k: v[curr_idx] for k, v in episode["next_observation"].items()
+                }
+                new_obs["desired_goal"] = new_goal
+                new_next_obs["desired_goal"] = new_goal
+
+                new_reward = self.env.unwrapped.compute_reward(
+                    achieved_curr.cpu().numpy(),
+                    new_goal.cpu().numpy(),
+                    info_curr,
+                )
+
+                super().store(
+                    observation=new_obs,
+                    action=action,
+                    reward=float(new_reward),
+                    next_observation=new_next_obs,
+                    terminated=False,
+                    truncated=truncated_curr,
+                    info=info_curr,
+                )

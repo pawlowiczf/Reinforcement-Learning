@@ -18,7 +18,7 @@ LOG_STD_MIN = -20
 def mlp(sizes, activation, output_activation=nn.Identity):
     """
     Multi-layer perceptron (MLP) with ReLU activations.
-    
+
     :param sizes: List of layer sizes.
     :param activation: Activation function to use for all layers except the last.
     :param output_activation: Activation function to use for the last layer.

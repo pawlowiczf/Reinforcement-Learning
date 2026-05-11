@@ -6,8 +6,10 @@
 # Also give it a try on push and pick and place tasks: PandaPush-v3, PandaPickAndPlace-v3, FetchPush-v3, FetchPickAndPlace-v3
 
 import argparse
+from pathlib import Path
 
 import gymnasium as gym
+
 # Uncomment the following line to use gymnasium_robotics environments
 # import gymnasium_robotics
 import panda_gym
@@ -28,7 +30,7 @@ from asdf.policies import MlpPolicy
 #    This is done in the HerReplayBuffer class.
 # 2. Improve the SAC algorithm with an automatically adjusted temperature (alpha) parameter.
 #    This is done in the SAC class.
-def main(env_id: str) -> None:
+def main(env_id: str, run_name: str | None) -> None:
     if torch.cuda.is_available():
         device = "cuda"
         print(f"Using GPU: {torch.cuda.get_device_name(0)}")
@@ -56,7 +58,8 @@ def main(env_id: str) -> None:
         goal_selection_strategy="future",
         device=device,
     )
-    logger = TensorboardLogger()
+    log_dir = Path("runs") / run_name if run_name else None
+    logger = TensorboardLogger(save_dir=log_dir)
     logger.open()
 
     algo = SAC(
@@ -66,8 +69,8 @@ def main(env_id: str) -> None:
         update_every=1,
         update_after=1000,
         batch_size=64,
-        # alpha="auto", # use automatic alpha adjustment (uncoment when implemented)
-        alpha=0.05, # use fixed alpha (comment out when implementing automatic alpha adjustment)
+        alpha="auto", # use automatic alpha adjustment (uncoment when implemented)
+        # alpha=0.05,  # use fixed alpha (comment out when implementing automatic alpha adjustment)
         gamma=0.9,
         # polyak=0.95,
         lr=1e-4,
@@ -91,7 +94,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--env", type=str, default="PandaReach-v3", help="Gym environment ID"
     )
+    parser.add_argument(
+        "--run-name",
+        type=str,
+        default=None,
+        help="Run identifier for TensorBoard (subdir under runs/)",
+    )
 
     args = parser.parse_args()
 
-    main(args.env)
+    main(args.env, args.run_name)
