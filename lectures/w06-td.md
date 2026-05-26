@@ -73,3 +73,27 @@ for każdy epizod do
 end for
 ```
 ### Q-learning
+Off-policy temporal difference control. Bezpośrednio aproksymuje optymalną politykę, niezależnie od tej, która obecnie wpływa na zachowanie agenta.
+
+### Sarsa z wartościami oczekiwanymi
+
+Stosować, gdy liczba akcji do wyboru w danym stanie nie jest zbyt duża, bo pod tych akcjach musimy całkować.
+
+$$
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \mathbb{E}[Q(S_{t+1}, A_{t+1}) \mid S_{t+1}] - Q(S_t, A_t) \right]
+$$
+$$
+\leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \sum_a \pi(a|S_{t+1}) Q(S_{t+1}, a) - Q(S_t, A_t) \right]
+$$
+
+### Problem inklinacji w kierunku maksymalizacji
+(maximization bias)
+
+### Double Q-learning
+Problem: te same próbki są używane zarówno do wyboru najlepszej akcji, jak i do oceny jej wartości. Szacunki $Q(B,a)$ są zaszumione. Gdy używamy ich do wyboru akcji, celowo szukamy tej z największym szumem. A potem używamy tego samego zaszumionego szacunku, jako wartości - dostajemy systematycznie zawyżoną ocenę.
+
+Rozwiązanie: podzielić odpowiedzialność i przechowywać dwie niezależne estymaty.
+
+$$
+Q_1(S_t, A_t) \leftarrow Q_1(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma Q_2(S_{t+1}, \argmax_a Q_1(S_{t+1}, a)) - Q_1(S_t, A_t) \right]
+$$
