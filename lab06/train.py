@@ -11,12 +11,12 @@ from pathlib import Path
 import gymnasium as gym
 
 # Uncomment the following line to use gymnasium_robotics environments
-# import gymnasium_robotics
+import gymnasium_robotics
 import panda_gym
 import torch
 
 # Uncomment the following lines to register gymnasium_robotics environments
-# gym.register_envs(gymnasium_robotics)
+gym.register_envs(gymnasium_robotics)
 
 from asdf.algos import SAC
 from asdf.buffers import HerReplayBuffer
@@ -30,7 +30,12 @@ from asdf.policies import MlpPolicy
 #    This is done in the HerReplayBuffer class.
 # 2. Improve the SAC algorithm with an automatically adjusted temperature (alpha) parameter.
 #    This is done in the SAC class.
-def main(env_id: str, run_name: str | None) -> None:
+def main(
+    env_id: str,
+    run_name: str | None,
+    checkpoint: str = "checkpoint.pt",
+    render: bool = False,
+) -> None:
     if torch.cuda.is_available():
         device = "cuda"
         print(f"Using GPU: {torch.cuda.get_device_name(0)}")
@@ -82,11 +87,20 @@ def main(env_id: str, run_name: str | None) -> None:
     env.close()
     logger.close()
 
-    policy.cpu()
-    env = gym.make(env_id, render_mode="human")
-    test_rew, test_ep_len = algo.test(env, n_episodes=50, sleep=1 / 30)
-    env.close()
-    print(f"Test reward {test_rew}, Test episode length: {test_ep_len}")
+    # Save the trained agent so it can be replayed later with play.py
+    algo.save(checkpoint)
+
+    # Only open the animation window when explicitly requested (--render),
+    # so the default training run is not interrupted by a GUI at the end.
+    if render:
+        policy.cpu()
+        env = gym.make(env_id, render_mode="human")
+        results = algo.test(env, n_episodes=50, sleep=1 / 30)
+        env.close()
+        print(
+            f"Test reward {results['mean_ep_ret']}, "
+            f"Test episode length: {results['mean_ep_len']}"
+        )
 
 
 if __name__ == "__main__":
@@ -100,7 +114,18 @@ if __name__ == "__main__":
         default=None,
         help="Run identifier for TensorBoard (subdir under runs/)",
     )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="checkpoint.pt",
+        help="Path to save the trained model checkpoint",
+    )
+    parser.add_argument(
+        "--render",
+        action="store_true",
+        help="Show the animation window after training (off by default)",
+    )
 
     args = parser.parse_args()
 
-    main(args.env, args.run_name)
+    main(args.env, args.run_name, args.checkpoint, args.render)

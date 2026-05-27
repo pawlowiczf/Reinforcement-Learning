@@ -200,6 +200,8 @@ class SAC:
         else:
             # Force conversion to float
             # this will throw an error if a malformed string (different from 'auto') is passed
+            self.alpha_optimizer = None
+            self.log_alpha = None
             self.alpha = torch.tensor(
                 float(self.alpha), dtype=torch.float32, device=alpha_device
             )
@@ -312,7 +314,6 @@ class SAC:
             alpha_loss.backward()
             self.alpha_optimizer.step()
             self.alpha = alpha
-            alpha_loss = alpha_loss
         else:
             alpha_loss = np.array(0)
 

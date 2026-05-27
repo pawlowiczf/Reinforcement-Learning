@@ -141,3 +141,15 @@ gradient     gradient
 | Stabilność | Dwa krytycy + sieć docelowa zapobiegają przeszacowaniu |
 | Automatyczne $\alpha$ | Brak konieczności ręcznego tuningu temperatury |
 | Ciągłe przestrzenie akcji | Zaprojektowany z myślą o robotyce i symulacjach fizycznych |
+
+# Paper
+
+Actor aims to maximixe expected reward, while also maximizing entropy. That is, to suceed at the task while acting as randomly as possible.
+
+Keys:
+- an actor-critic architecture with separate policy and value function networks
+- an off-policy formuation that enables reuse of previously collected data for efficiency
+- entropy maximization to enable stability and exploration
+
+Actor = policy
+Critic = value function

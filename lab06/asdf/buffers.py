@@ -17,6 +17,7 @@ class BaseBuffer(ABC):
     ) -> None:
         self.device = device
 
+        # position 'i' in each class field corresponds to the same transition (s, a, r, s')
         self.actions = torch.zeros(
             combined_shape(size, env.action_space.shape),
             dtype=torch.float32,
@@ -109,6 +110,11 @@ class DictReplayBuffer(BaseBuffer):
             k: combined_shape(size, v.shape) for k, v in env.observation_space.items()
         }
 
+        # self.observations = {
+        #     "observation":   Tensor with shape (size, obs_dim),
+        #     "achieved_goal": Tensor with shape (size, 3),
+        #     "desired_goal":  Tensor with shape (size, 3),
+        # }
         self.observations: dict[str, Tensor] = {
             k: torch.zeros(obs_space[k], dtype=torch.float32, device=device)
             for k, v in env.observation_space.items()
@@ -178,6 +184,7 @@ class HerReplayBuffer(DictReplayBuffer):
         self._start_ptr = self._ptr
 
     def end_episode(self):
+        # returns transitions of one episode (s, a, r, s')
         if self._start_ptr <= self._ptr:
             idx = np.arange(self._start_ptr, self._ptr)
         else:
@@ -203,6 +210,7 @@ class HerReplayBuffer(DictReplayBuffer):
 
             for _ in range(n_goals):
                 if self.selection_strategy == "final":
+                    # in 'final' we treat last state of the episode as the goal
                     next_idx = T - 1
                 elif self.selection_strategy == "future":
                     if curr_idx == T - 1:
@@ -211,6 +219,7 @@ class HerReplayBuffer(DictReplayBuffer):
                 else:
                     raise NotImplementedError(self.selection_strategy)
 
+                # 'next_observation' is state after the action ('observation' is the state beforing taking action)
                 new_goal = episode["next_observation"]["achieved_goal"][next_idx]
 
                 new_obs = {
@@ -222,6 +231,7 @@ class HerReplayBuffer(DictReplayBuffer):
                 new_obs["desired_goal"] = new_goal
                 new_next_obs["desired_goal"] = new_goal
 
+                # goal-conditioned RL - the reward does not depend on state and action, but on the goal (if it is achieved)
                 new_reward = self.env.unwrapped.compute_reward(
                     achieved_curr.cpu().numpy(),
                     new_goal.cpu().numpy(),
