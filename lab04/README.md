@@ -37,11 +37,10 @@ W CartPole jest dokładnie odwrotnie: najlepsza możliwa polityka prowadzi WPROS
 ```
 
 Załączam też zdjęcie błędów i nagród dla CartPole dla błędnego algorytmu:
-<!-- !()[plots_cartpole_trainedD_v1/learning_01975.png] -->
 ![image](plots_cartpole_trained_v1\learning_01975.png)
 
 # Podsumowanie implementacji
-Nie będę przytaczać teori dotyczącej zaimplementowanego algorytmu, ani większych fragmentów kodu, ze względu na długość raportu. Wstawiam jedynie funkcję `compute_loss(...):
+Nie będę przytaczać teori dotyczącej zaimplementowanego algorytmu, ani większych fragmentów kodu, ze względu na długość raportu. Wstawiam jedynie funkcję `compute_loss(...)`:
 
 ```python
 def compute_loss(self, action, x_s, x_s_next, reward, terminal):
@@ -122,17 +121,19 @@ Dla tego problemu, osobne sieci neuronowe poprawiają proces uczenia oraz rezult
 ![](runs\separate_trunk_true_lunar_\plots_lunar\learning_01600.png)
 
 ## Dwie rozłączne sieci neuronowe dla CartPole z większym alpha
-Przyjęty początkowo krok uczenia `a=1e-3` zwiększam do `a=0.01`. W tym przypadku doszło do saturacji aktora - po określonej liczbie epizodów obie krzywe stają się martwymi liniami. Softmax sięsaturuje - jeden logit jest dużo większy od innych, więc polityka staje się deterministyczna, a gradient jest równy 0. Aktor traci możliwość zmiany polityki. Po wyrenderowaniu animacji, zobaczymy, że w każdy epizod będzie wyglądać tak samo.
+Przyjęty początkowo krok uczenia `a=1e-3` zwiększam do `a=0.01`. W tym przypadku doszło do saturacji aktora - po określonej liczbie epizodów obie krzywe stają się martwymi liniami. Softmax się saturuje - jeden logit jest dużo większy od innych, więc polityka staje się deterministyczna, a gradient jest równy 0. Aktor traci możliwość zmiany polityki. Po wyrenderowaniu animacji, zobaczymy, że w każdy epizod będzie wyglądać tak samo.
 
 ![](runs\separate_trunk_false_bigger_alpha_cartpole_v2_\plots_cartpole\learning_01075.png)
 ![](runs\separate_trunk_true_bigger_alpha_cartpole_\plots_cartpole\learning_01975.png)
 
-## Dwie rozłączne sieci neuronowe, mniejsza ilość neuronów w warstwatch ukrytych dla CartPole
+## Dwie rozłączne sieci neuronowe, mniejsza ilość neuronów w warstwach ukrytych dla CartPole
 Jeden z najlepszych uruchomień CartPole. Zmniejszenie rozmiarów sieci działa na korzyść środowiska CartPole, proces uczenia jest szybszy. Patyk jest utrzymywany cały czas w pozycji pionowej przez epizod. Niemal liniowy, monotoniczny wzrost nagrody, brak oscylacji, brak kryzysów i zapaści.
+
+Czy 128 neuronów jest konieczne? Nie. Dla CartPole pojemność `(32, 32)` jest nie tylko wystarczająca, ale wręcz **lepsza** - uczenie jest szybsze (próg osiągnięty w ~300 epizodach zamiast 350+) i unika zapaści polityki obserwowanej wcześniej przy `separate=True` z 128 neuronami.
 
 ![](runs\separate_trunk_true_32_hidden_cartpole_\plots_cartpole\learning_00400.png)
 
-## Dwie rozłączne sieci neuronowe, mniejsza ilość neuronów w warstwatch ukrytych dla LunarLander
+## Dwie rozłączne sieci neuronowe, mniejsza ilość neuronów w warstwach ukrytych dla LunarLander
 Wzrost nagród jest dość powolny, ale nie pojawiają się duże zapaści. Polityka utknęła w lokalnym minimum. Agent uczy się lądować, chociaż nie jest ono precyzyjne i szybkie. Często na chwilę zawisa w powietrzu, robi korekty.
 
 ![](runs\separate_trunk_true_32_hidden_lunar_\plots_lunar\learning_01500.png)
@@ -141,4 +142,26 @@ Wzrost nagród jest dość powolny, ale nie pojawiają się duże zapaści. Poli
 
 Bez entropii LunarLander uczy się, ale niestabilnie. Pojawia się klasyczna katastrofa zapomnienia, wysokie oscylacje MSE (25–85) i niezdolność do utrzymania polityki powyżej progu mimo wielokrotnego jego dotknięcia. Entropia działa tu jako regularyzator stabilizujący - utrzymuje softmax z dala od saturacji, dzięki czemu aktor nie potrafi gwałtownie nadpisać działającej polityki nieprzetestowanym wariantem.
 
+Czy polityka zapada się szybciej? W sensie pełnej zapaści jak w CartPole z `separate=True` - nie, agent nadal się uczy i dochodzi blisko progu. Ale występuje katastroficzna zapaść w trakcie treningu (drop +110 -> −100 w okolicy ep. 600), której w runach z `β=0.01` nie obserwowaliśmy.
+
+Czy osiąga gorsze wyniki? Tak. Mimo dotknięcia ~195 kilka razy, agent nigdy nie utrzymał średniej 100-epizodowej powyżej progu 200. Dla porównania, runy z `β=0.01` osiągały gładkie ~180–190 i były bliższe ukończenia.
+
 ![](runs\separate_trunk_true_entropy_zero_lunar_v2_\plots_lunar\learning_02250.png)
+
+# Podsumowanie
+
+Przeprowadzone eksperymenty obejmowały implementację algorytmu Actor-Critic w wariancie one-step TD oraz analizę wpływu kluczowych hiperparametrów na proces uczenia w środowiskach CartPole-v1 i LunarLander-v3. Większą wartość poznawczą miały przebiegi nieudane - pozwoliły zidentyfikować konkretne mechanizmy destabilizujące algorytm i powiązać je z wyborami architektonicznymi.
+
+## Główne wnioski
+
+- **Rozróżnienie `terminated` od `done` w celu TD jest krytyczne.** Pomieszanie obu flag w sygnale terminalnym powoduje systematyczne zaniżenie wartości stanów końcowych, co najsilniej uderza w CartPole, gdzie ścieżka sukcesu prowadzi przez `truncated`.
+- **Pojemność sieci `(32, 32)` była wystarczająca dla CartPole** i pozwoliła osiągnąć szybszą oraz stabilniejszą zbieżność niż konfiguracja `(128, 128)`. Dla LunarLandera ta sama redukcja okazała się zbyt agresywna - agent uczył się polityki zwisania, ale nie precyzyjnego lądowania.
+- **Zbyt wysoki `learning_rate` (`α = 0.01`)** powoduje saturację softmaxu w pierwszych ~50 epizodach. Polityka staje się deterministyczna, pochodna zanika, a uczenie nieodwracalnie się zatrzymuje.
+- **Entropia w LunarLanderze pełni dwie role:** eksploracyjną i regularyzacyjną. Wyłączenie `β = 0` nie blokuje uczenia całkowicie, ale prowadzi do katastrofalnych spadków polityki w trakcie treningu i niezdolności do utrzymania średniej powyżej progu mimo jego okazjonalnego osiągania.
+
+## Rezultaty ilościowe
+
+| Środowisko | Najlepszy run | Próg | Liczba epizodów | Stan końcowy |
+|---|---|---|---|---|
+| CartPole-v1 | `separate=True`, `(32, 32)` | 475 | ~300 | osiągnięty próg |
+| LunarLander-v3 | `separate=True`, `(256, 256)`, `β=0.01` | 200 | ~1500 | ~190 (nieukończony) |
