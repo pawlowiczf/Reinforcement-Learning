@@ -37,7 +37,7 @@ W CartPole jest dokładnie odwrotnie: najlepsza możliwa polityka prowadzi WPROS
 ```
 
 Załączam też zdjęcie błędów i nagród dla CartPole dla błędnego algorytmu:
-![image](plots_cartpole_trained_v1\learning_01975.png)
+![image](plots_cartpole_trained_v1/learning_01975.png)
 
 # Podsumowanie implementacji
 Nie będę przytaczać teori dotyczącej zaimplementowanego algorytmu, ani większych fragmentów kodu, ze względu na długość raportu. Wstawiam jedynie funkcję `compute_loss(...)`:
@@ -92,12 +92,12 @@ Implementacja algorytmu przebiegła spokojnie, instrukcje zarówno w kodzie, jak
 ## Pierwsze testy - wspólny trzon sieci neuronowej
 
 ### Pierwsze uruchomienie z domyślnymi wartościami parametrów dla CartPole
-![](plots_cartpole_trained_v2\learning_00450.png)
+![](plots_cartpole_trained_v2/learning_00450.png)
 
 Na wykresach widać zależność między błędem krytyka (MSE TD) a zwrotem agenta. Na początku (ep. 0-75) MSE rośnie, bo rosną same zwroty - większe wartości Q oznaczają większe błędy do kwadratu. Nie jest to objaw złego uczenia. W fazie stabilizacji (ep. 75-175) MSE nie spada, krytyk nie poprawia swoich oszacowań, więc aktor dostaje zaszumiony sygnał i polityka nie postępuje. Przełomy następują wtedy, gdy MSE zaczyna spadać (ok. ep. 175 i 320) - ustabilizowany krytyk daje aktorowi wiarygodny gradient i zwrot skacze w górę.
 
 ### Pierwsze uruchomienie z domyślnymi wartościami parametrów dla LunarLander
-![](plots_lunar_trained_v1\learning_02000.png)
+![](plots_lunar_trained_v1/learning_02000.png)
 
 Trening LunarLander przebiegał w trzech wyraźnych fazach.
 
@@ -112,31 +112,31 @@ Przeprowadzę teraz eksperymenty z rozłącznymi sieciami neuronowymi.
 ### Dwie rozłączne sieci neuronowe dla CartPole
 Tutaj pojawiła się ciekawa rzecz - krytyk nauczył się doskonale przewidywać porażkę, a aktor trzyma się fatalnej polityki (zapaść polityki). Polityka się nie zmienia. Wydaje mi się, że może to wynikać z dużej liczby neuronów w warstwach ukrytych. Agent przestał eksplorować, entropia jest równa 0.
 
-![](runs/separate_trunk_true_cartpole_\plots_cartpole\learning_01950.png)
+![](runs/separate_trunk_true_cartpole_/plots_cartpole/learning_01950.png)
 
 ## Dwie rozłączne sieci neuronowe dla LunarLander
 
 Dla tego problemu, osobne sieci neuronowe poprawiają proces uczenia oraz rezultaty. Po pierwsze, rezultaty nauczania są znacznie szybsze - już w kroku około 600 otrzymuje zwrot na poziomie 170. Nie pojawiły się też nagłe zapaści nagrody, błędy MSE też jakoś gwałtownie nie wystrzeliwują (w porównaniu do pierwszego uruchomienia na samej górze raportu).
 
-![](runs\separate_trunk_true_lunar_\plots_lunar\learning_01600.png)
+![](runs/separate_trunk_true_lunar_/plots_lunar/learning_01600.png)
 
 ## Dwie rozłączne sieci neuronowe dla CartPole z większym alpha
 Przyjęty początkowo krok uczenia `a=1e-3` zwiększam do `a=0.01`. W tym przypadku doszło do saturacji aktora - po określonej liczbie epizodów obie krzywe stają się martwymi liniami. Softmax się saturuje - jeden logit jest dużo większy od innych, więc polityka staje się deterministyczna, a gradient jest równy 0. Aktor traci możliwość zmiany polityki. Po wyrenderowaniu animacji, zobaczymy, że w każdy epizod będzie wyglądać tak samo.
 
-![](runs\separate_trunk_false_bigger_alpha_cartpole_v2_\plots_cartpole\learning_01075.png)
-![](runs\separate_trunk_true_bigger_alpha_cartpole_\plots_cartpole\learning_01975.png)
+![](runs/separate_trunk_false_bigger_alpha_cartpole_v2_/plots_cartpole/learning_01075.png)
+![](runs/separate_trunk_true_bigger_alpha_cartpole_/plots_cartpole/learning_01975.png)
 
 ## Dwie rozłączne sieci neuronowe, mniejsza ilość neuronów w warstwach ukrytych dla CartPole
 Jeden z najlepszych uruchomień CartPole. Zmniejszenie rozmiarów sieci działa na korzyść środowiska CartPole, proces uczenia jest szybszy. Patyk jest utrzymywany cały czas w pozycji pionowej przez epizod. Niemal liniowy, monotoniczny wzrost nagrody, brak oscylacji, brak kryzysów i zapaści.
 
 Czy 128 neuronów jest konieczne? Nie. Dla CartPole pojemność `(32, 32)` jest nie tylko wystarczająca, ale wręcz **lepsza** - uczenie jest szybsze (próg osiągnięty w ~300 epizodach zamiast 350+) i unika zapaści polityki obserwowanej wcześniej przy `separate=True` z 128 neuronami.
 
-![](runs\separate_trunk_true_32_hidden_cartpole_\plots_cartpole\learning_00400.png)
+![](runs/separate_trunk_true_32_hidden_cartpole_/plots_cartpole/learning_00400.png)
 
 ## Dwie rozłączne sieci neuronowe, mniejsza ilość neuronów w warstwach ukrytych dla LunarLander
 Wzrost nagród jest dość powolny, ale nie pojawiają się duże zapaści. Polityka utknęła w lokalnym minimum. Agent uczy się lądować, chociaż nie jest ono precyzyjne i szybkie. Często na chwilę zawisa w powietrzu, robi korekty.
 
-![](runs\separate_trunk_true_32_hidden_lunar_\plots_lunar\learning_01500.png)
+![](runs/separate_trunk_true_32_hidden_lunar_/plots_lunar/learning_01500.png)
 
 ## Dwie rozłączne sieci neuronowe, entropy na zero
 
@@ -146,7 +146,7 @@ Czy polityka zapada się szybciej? W sensie pełnej zapaści jak w CartPole z `s
 
 Czy osiąga gorsze wyniki? Tak. Mimo dotknięcia ~195 kilka razy, agent nigdy nie utrzymał średniej 100-epizodowej powyżej progu 200. Dla porównania, runy z `β=0.01` osiągały gładkie ~180–190 i były bliższe ukończenia.
 
-![](runs\separate_trunk_true_entropy_zero_lunar_v2_\plots_lunar\learning_02250.png)
+![](runs/separate_trunk_true_entropy_zero_lunar_v2_/plots_lunar/learning_02250.png)
 
 # Podsumowanie
 
