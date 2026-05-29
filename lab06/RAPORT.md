@@ -47,15 +47,20 @@ Podsumowując pracę nad tą częścią, algorytm trochę mnie przerósł. Stara
 
 Treningi przeprowadzałem na maszynie Ares. Stworzyłem dodatkowy plik `play.py`, który pozwala na odtworzenie, render animacji po zakończonym treningu.
 
-Początkowo ustawiłem `n_steps = 100_000`. Drugi trening przeprowadziłem na `n_steps = 3_000_000`. W obu przypadkach test dla `PandaReach-v3` dał sukces $100\%$ - potwierdza to poprawność implementacji. Niestety, dla obu przypadków, test dla bardziej skomplikowanych środowisk okazał się słaby. Agent nie wykonuje losowych, chaotycznych ruchów, ale też nie radzi sobie z postawionym celem.
-
-Jeśli chodzi o przesuwanie klocka np. w `PandaPush-v3` to agent radzi sobie jedynie z dotknięciem i przesunięciem w miejsce, które nie jest celem. W środowiskach z prefixem `Fetch`, nie radzi sobie już zupełnie. Są to złożone środowiska, `n_steps` jest za małe.
+Początkowo ustawiłem `n_steps = 100_000`. Drugi trening przeprowadziłem na `n_steps = 3_000_000`. W obu przypadkach test dla `PandaReach-v3` dał sukces $100\%$ - potwierdza to poprawność implementacji. `PandaPush-v3` także działa świetnie, chociaż tylko dla przypadku z `n_steps=3_000_000`. Niestety, dla obu przypadków, test dla bardziej skomplikowanych środowisk okazał się słaby. Na plus, agent nie wykonuje losowych, chaotycznych ruchów, ale też nie radzi sobie z postawionym celem. W środowiskach z prefixem `Fetch`, nie radzi sobie zupełnie. Są to złożone środowiska, `n_steps` jest za małe.
 
 ```
 PandaReach-v3
 
 Mean episode return: -1.4
 Mean episode length: 2.4
+Success rate: 100.00%
+
+---
+
+PandaPush-v3
+Mean episode return: -7
+Mean episode length: 8
 Success rate: 100.00%
 
 ---
@@ -68,3 +73,6 @@ Success rate: 30.00%
 ```
 
 ![Panda Reach](panda-reach.png)
+
+Przykładowe wywołanie renderu animacji:
+`python play.py --env "PandaPush-v3" --checkpoint "panda-push-v3.pt" --episodes 10 --sleep 0.02`
