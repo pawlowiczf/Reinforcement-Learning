@@ -90,6 +90,8 @@ $$
 (maximization bias)
 
 ### Double Q-learning
+Q learning jest off-policy.
+
 Problem: te same próbki są używane zarówno do wyboru najlepszej akcji, jak i do oceny jej wartości. Szacunki $Q(B,a)$ są zaszumione. Gdy używamy ich do wyboru akcji, celowo szukamy tej z największym szumem. A potem używamy tego samego zaszumionego szacunku, jako wartości - dostajemy systematycznie zawyżoną ocenę.
 
 Rozwiązanie: podzielić odpowiedzialność i przechowywać dwie niezależne estymaty.
@@ -97,3 +99,10 @@ Rozwiązanie: podzielić odpowiedzialność i przechowywać dwie niezależne est
 $$
 Q_1(S_t, A_t) \leftarrow Q_1(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma Q_2(S_{t+1}, \argmax_a Q_1(S_{t+1}, a)) - Q_1(S_t, A_t) \right]
 $$
+
+Problem z Q-learningiem: ten sam Q robi dwie rzeczy na raz - wybiera akcję oraz ocenia. Jeśli Q przypadkowo zawyży wartość jakiejś akcji, to później `argmax` ją wybierze, błąd się wzmocni.
+
+Nowy proces:
+1. Oceniamy politykę, taką jaka byłaby w oparciu o Q1. Mamy starą estymatę Q1 i robimy nową.
+2. Bootstraping robimy w oparciu o Q2
+
