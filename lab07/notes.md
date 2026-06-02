@@ -18,3 +18,7 @@ Offline RL - jak modelowanie sekwencji: STAN AKCJA NAGRODA STAN AKCJA.
 Tokeny nie mogą być tylko stanami, bo będziemy przewidywać tylko kolejne stany, bez nagród, czy akcji. Wrzucamy $\hat{r}$ - przyszły zwrot, stan akcja - taka trójka (trzy tokeny). Chcemy w wyniku dostać następną akcję. Wrzucam więcej tokenów, niż pobieram.
 
 $\hat{r}$ - r z daszkiem, kluczowy pomysł. Gdybyśmy wrzuiccili stan, akcja, nagroda - dla tego stanu, zwróć akcję, ale nie bardzo jak to wykorzystać podczas ewaluacji. Podczas ewaluacji chcę zmusić model do zwracania optymalnej akcji, ale żeby wiedział, które są optymalne to muszę wprowadzić tę informację. Pomysłem jest wprowadzenie, ze r z daszkiem to suma przyszłych nagród, którą znam bo to jest offline-dataset (mogę policzyć), często nie liczę do końca epizodu, ale okno. Trenujemy politykę $\pi(a|s, r z daszkiem)$. Podczas ewaluacji będziemy już podawać możliwą wysoką wartość nagrody skumulowanej.
+
+`uv add -r requirements.txt`
+`.venv\Scripts\activate`
+`uv run python main.py`
