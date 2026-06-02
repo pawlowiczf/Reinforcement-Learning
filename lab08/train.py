@@ -144,6 +144,10 @@ class TrainingLoggerCallback(BaseCallback):
         self.episode_rewards: list[float] = []
         self.episode_lengths: list[int] = []
         self.timesteps_at_episode_end: list[int] = []
+        # Crafter-specific: how many DISTINCT achievements were unlocked in
+        # each episode, plus the full per-achievement counts (for the profile).
+        self.episode_n_achievements: list[int] = []
+        self.episode_achievements: list[dict] = []
 
     def _on_step(self) -> bool:
         # _on_step() is called by SB3 after EVERY environment step.
@@ -158,6 +162,15 @@ class TrainingLoggerCallback(BaseCallback):
                 self.episode_lengths.append(ep["l"])
                 # self.num_timesteps = total steps taken so far (the x-axis).
                 self.timesteps_at_episode_end.append(self.num_timesteps)
+
+                # Crafter puts a {name: count} dict of its 22 achievements in
+                # info["achievements"]; count an achievement as "unlocked" if
+                # it happened at least once this episode.
+                ach = info.get("achievements", {}) or {}
+                self.episode_achievements.append(dict(ach))
+                self.episode_n_achievements.append(
+                    sum(1 for v in ach.values() if v > 0)
+                )
         # Returning True = keep training; returning False would stop it early.
         return True
 
@@ -178,34 +191,108 @@ def plot_results(
     runs: dict[str, TrainingLoggerCallback],
     out_dir: Path,
 ) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    # Three learning curves over training time, one line per run so baseline
+    # and experiment can be compared on the same axes.
+    fig, axes = plt.subplots(1, 3, figsize=(17, 4))
     fig.suptitle("PPO on Crafter -- Training Progress", fontsize=13)
 
     for label, cb in runs.items():
         ts = np.array(cb.timesteps_at_episode_end)
         rw = smooth(cb.episode_rewards)
+        # smooth() shortens the series; align the x-axis to the smoothed length.
         ts_smooth = ts[len(ts) - len(rw) :]
 
         axes[0].plot(ts_smooth, rw, label=label)
         axes[1].plot(ts_smooth, smooth(cb.episode_lengths), label=label)
+        axes[2].plot(ts_smooth, smooth(cb.episode_n_achievements), label=label)
 
     axes[0].set_title("Episode Reward (smoothed)")
-    axes[0].set_xlabel("Timesteps")
     axes[0].set_ylabel("Reward")
-    axes[0].legend()
-    axes[0].grid(alpha=0.3)
 
-    axes[1].set_title("Episode Length (smoothed)")
-    axes[1].set_xlabel("Timesteps")
+    # Episode length = how long the agent survives before dying / timing out.
+    axes[1].set_title("Survival -- Episode Length (smoothed)")
     axes[1].set_ylabel("Steps")
-    axes[1].legend()
-    axes[1].grid(alpha=0.3)
+
+    # Distinct achievements per episode = the clearest "is it learning?" signal.
+    axes[2].set_title("Distinct Achievements / Episode (smoothed)")
+    axes[2].set_ylabel("# achievements (of 22)")
+
+    for ax in axes:
+        ax.set_xlabel("Timesteps")
+        ax.legend()
+        ax.grid(alpha=0.3)
 
     plt.tight_layout()
     out_path = out_dir / "training_curves.png"
     plt.savefig(out_path, dpi=120)
     print(f"[plot] saved -> {out_path}")
     plt.show()
+
+
+def plot_achievements(
+    runs: dict[str, TrainingLoggerCallback],
+    out_dir: Path,
+) -> None:
+    """Bar chart: fraction of episodes in which each achievement was unlocked."""
+    # Collect the union of achievement names seen across all runs.
+    names: list[str] = []
+    for cb in runs.values():
+        if cb.episode_achievements:
+            names = sorted(cb.episode_achievements[-1].keys())
+            break
+    if not names:
+        print("[plot] no achievements recorded, skipping achievement plot")
+        return
+
+    # For each run, success rate = in how many episodes each achievement fired.
+    rates: dict[str, np.ndarray] = {}
+    for label, cb in runs.items():
+        eps = cb.episode_achievements
+        n = max(len(eps), 1)
+        rates[label] = np.array(
+            [sum(1 for e in eps if e.get(name, 0) > 0) / n for name in names]
+        )
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    y = np.arange(len(names))
+    height = 0.8 / len(runs)
+    for i, (label, vals) in enumerate(rates.items()):
+        ax.barh(y + i * height, vals * 100, height=height, label=label)
+
+    ax.set_yticks(y + height * (len(runs) - 1) / 2)
+    ax.set_yticklabels(names, fontsize=8)
+    ax.set_xlabel("Episodes unlocked (%)")
+    ax.set_title("Achievement profile -- success rate over all training episodes")
+    ax.legend()
+    ax.grid(alpha=0.3, axis="x")
+
+    plt.tight_layout()
+    out_path = out_dir / "achievements.png"
+    plt.savefig(out_path, dpi=120)
+    print(f"[plot] saved -> {out_path}")
+    plt.show()
+
+
+def print_achievement_summary(runs: dict[str, TrainingLoggerCallback]) -> None:
+    """Print, per run, which achievements were ever unlocked and how often."""
+    for label, cb in runs.items():
+        eps = cb.episode_achievements
+        if not eps:
+            continue
+        n = len(eps)
+        totals: dict[str, int] = {}
+        for e in eps:
+            for name, count in e.items():
+                if count > 0:
+                    totals[name] = totals.get(name, 0) + 1
+        unlocked = sorted(totals.items(), key=lambda kv: -kv[1])
+
+        print(f"\n[{label}] achievements over {n} episodes "
+              f"({len(unlocked)}/22 ever unlocked):")
+        if not unlocked:
+            print("    (none — agent never completed any achievement)")
+        for name, hits in unlocked:
+            print(f"    {name:<22} {hits / n * 100:5.1f}%  ({hits}/{n} episodes)")
 
 
 # ---------------------------------------------------------------------------
@@ -417,8 +504,11 @@ if __name__ == "__main__":
     print("\n--- Final evaluation ---")
     final_eval(model, n_episodes=20, seed=args.seed)
 
-    # Save curves (single run)
-    plot_results({args.run: cb}, out_dir=log_dir)
+    # Print + save all curves/summaries for this run.
+    runs = {args.run: cb}
+    print_achievement_summary(runs)        # text summary to the console
+    plot_results(runs, out_dir=log_dir)    # reward / survival / achievements curves
+    plot_achievements(runs, out_dir=log_dir)  # per-achievement success-rate bars
 
     # Save model: SB3 writes a single .zip with weights + hyperparameters.
     # Reload later with PPO.load(path) and act via model.predict(obs).
