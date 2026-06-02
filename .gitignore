@@ -24,3 +24,9 @@ htmlcov/
 
 .DS_Store
 Thumbs.db
+
+# Trained models and training logs
+models/
+*.zip
+tb/
+logs/

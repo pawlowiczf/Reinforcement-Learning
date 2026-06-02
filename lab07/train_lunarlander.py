@@ -21,6 +21,7 @@ from pathlib import Path
 import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 
 
@@ -34,8 +35,11 @@ def make_env(env_id, render_mode=None):
     return Monitor(gym.make(env_id, render_mode=render_mode))
 
 
-def train(env_id, timesteps, model_path, seed, tb_dir, run_name):
-    env = make_env(env_id)
+def train(env_id, timesteps, model_path, seed, tb_dir, run_name, n_envs):
+    # Vectorised env: n_envs copies running in parallel so PPO gathers more,
+    # less-correlated data per update (faster + more stable than a single env).
+    # make_vec_env wraps each copy in Monitor for us automatically.
+    env = make_vec_env(env_id, n_envs=n_envs, seed=seed)
 
     # PPO agent. "MlpPolicy" = a small fully-connected net, the right choice
     # when observations are vectors (not images). Defaults are well-tuned for
@@ -103,6 +107,9 @@ def parse_args():
     p.add_argument(
         "--timesteps", type=int, default=500_000, help="Total training timesteps"
     )
+    p.add_argument(
+        "--n-envs", type=int, default=8, help="Parallel environments for training"
+    )
     p.add_argument("--seed", type=int, default=0)
     p.add_argument(
         "--eval-episodes", type=int, default=20, help="Episodes for evaluation"
@@ -139,6 +146,7 @@ if __name__ == "__main__":
             seed=args.seed,
             tb_dir=args.tb_dir,
             run_name=run_name,
+            n_envs=args.n_envs,
         )
 
     evaluate(model, args.env, n_episodes=args.eval_episodes)

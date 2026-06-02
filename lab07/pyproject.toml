@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "gymnasium[box2d]",
+    "jax>=0.10.1",
+    "minari>=0.5.3",
     "nanodt>=0.1.0",
     "rich>=15.0.0",
     "stable-baselines3>=2.6.0",
