@@ -27,7 +27,9 @@ from stable_baselines3 import PPO
 
 def parse_args():
     p = argparse.ArgumentParser(description="Collect PPO trajectories into Minari")
-    p.add_argument("--env", default="LunarLander-v3", help="Gymnasium env id")
+    p.add_argument(
+        "--env", default="LunarLanderContinuous-v3", help="Gymnasium env id"
+    )
     p.add_argument(
         "--run-name", default=None, help="Run name of the model to load (no .zip)"
     )
@@ -99,7 +101,7 @@ def main():
         while not done:
             # The expert maps observation -> action; DataCollector records it.
             action, _ = model.predict(obs, deterministic=deterministic)
-            obs, reward, terminated, truncated, _ = env.step(int(action))
+            obs, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             ep_ret += reward
             ep_len += 1
@@ -116,9 +118,7 @@ def main():
     dataset = env.create_dataset(
         dataset_id=args.dataset_id,
         algorithm_name="PPO",
-        author="Filip Pawłowicz",
-        author_email="pawlowicz.filip137@gmail.com",
-        description=f"PPO expert demonstrations on {args.env}",
+        description=f"PPO {args.run_name} demonstrations on {args.env}",
     )
     env.close()
 
@@ -134,3 +134,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_100k_s0 --dataset-id lunarlander/ppo_beginner_100k-v0 --num-episodes 1000
+# uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_400k_s0 --dataset-id lunarlander/ppo_intermediate_400k-v0 --num-episodes 1000
+# uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_1000k_s0 --dataset-id lunarlander/ppo_expert_1000k-v0 --num-episodes 1000

@@ -1,18 +1,17 @@
 """
 Train / evaluate a PPO expert on LunarLander-v3.
 
-Each run gets a name (auto-generated from env/timesteps/seed, or --run-name).
-Models are saved to <models-dir>/<run-name>.zip and TensorBoard logs to
-<tb-dir>/<run-name>_1, so different runs never overwrite each other.
+# train from scratch -> models/ppo_LunarLander-v3_500k_s0.zip + tb/...
+uv run python train_lunarlander.py
 
-    # train from scratch -> models/ppo_LunarLander-v3_500k_s0.zip + tb/...
-    uv run python train_lunarlander.py
+# custom name + shorter run
+uv run python train_lunarlander.py --run-name expert --timesteps 200000
 
-    # custom name + shorter run
-    uv run python train_lunarlander.py --run-name expert --timesteps 200000
+# skip training: load a saved run and just watch it play
+uv run python train_lunarlander.py --load --run-name expert --watch
 
-    # skip training: load a saved run, evaluate and watch it play
-    uv run python train_lunarlander.py --load --run-name expert --watch
+# ...and also print the eval score
+uv run python train_lunarlander.py --load --run-name expert --watch --eval
 """
 
 import argparse
@@ -47,9 +46,9 @@ def train(env_id, timesteps, model_path, seed, tb_dir, run_name, n_envs):
     model = PPO(
         policy="MlpPolicy",
         env=env,
-        verbose=1,            # print the training table each update
+        verbose=1, # print the training table each update
         seed=seed,
-        tensorboard_log=tb_dir,  # parent dir; the run name becomes a subfolder
+        tensorboard_log=tb_dir, # parent dir; the run name becomes a subfolder
     )
 
     # The whole training loop: collect rollouts -> update -> repeat.
@@ -84,7 +83,7 @@ def watch(model, env_id, n_episodes=3):
         total = 0.0
         while not done:
             action, _ = model.predict(obs, deterministic=True)
-            obs, reward, terminated, truncated, _ = env.step(int(action))
+            obs, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             total += reward
         print(f"[watch] episode {ep + 1}: reward={total:.1f}")
@@ -93,7 +92,9 @@ def watch(model, env_id, n_episodes=3):
 
 def parse_args():
     p = argparse.ArgumentParser(description="PPO expert for LunarLander")
-    p.add_argument("--env", default="LunarLander-v3", help="Gymnasium env id")
+    p.add_argument(
+        "--env", default="LunarLanderContinuous-v3", help="Gymnasium env id"
+    )
     p.add_argument(
         "--run-name",
         default=None,
@@ -118,6 +119,12 @@ def parse_args():
         "--load",
         action="store_true",
         help="Skip training; load the run from --models-dir and just evaluate/watch",
+    )
+    p.add_argument(
+        "--eval",
+        action="store_true",
+        help="Run evaluation (mean reward over --eval-episodes). "
+        "Always on after training; with --load it's opt-in.",
     )
     p.add_argument(
         "--watch", action="store_true", help="Render a few episodes in a window"
@@ -149,7 +156,13 @@ if __name__ == "__main__":
             n_envs=args.n_envs,
         )
 
-    evaluate(model, args.env, n_episodes=args.eval_episodes)
+    # Always evaluate after fresh training; when just loading, evaluate only
+    # if asked (so --load --watch can open the window without the eval wait).
+    if args.eval or not args.load:
+        evaluate(model, args.env, n_episodes=args.eval_episodes)
 
     if args.watch:
         watch(model, args.env)
+
+# uv run python .\train_lunarlander.py --load --run-name "ppo_LunarLanderContinuous-v3_100k_s0" --watch
+# uv run python .\train_lunarlander.py --load --run-name "ppo_LunarLanderContinuous-v3_1000k_s0" --watch
