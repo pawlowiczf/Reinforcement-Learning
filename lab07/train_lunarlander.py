@@ -46,9 +46,9 @@ def train(env_id, timesteps, model_path, seed, tb_dir, run_name, n_envs):
     model = PPO(
         policy="MlpPolicy",
         env=env,
-        verbose=1, # print the training table each update
+        verbose=1,  # print the training table each update
         seed=seed,
-        tensorboard_log=tb_dir, # parent dir; the run name becomes a subfolder
+        tensorboard_log=tb_dir,  # parent dir; the run name becomes a subfolder
     )
 
     # The whole training loop: collect rollouts -> update -> repeat.
@@ -71,7 +71,9 @@ def evaluate(model, env_id, n_episodes=20):
     )
     eval_env.close()
     print(f"[eval] mean_reward={mean_r:.1f} +/- {std_r:.1f} over {n_episodes} episodes")
-    print("[eval] solved!" if mean_r >= 200 else "[eval] not solved yet (target >= 200)")
+    print(
+        "[eval] solved!" if mean_r >= 200 else "[eval] not solved yet (target >= 200)"
+    )
 
 
 def watch(model, env_id, n_episodes=3):
@@ -92,9 +94,7 @@ def watch(model, env_id, n_episodes=3):
 
 def parse_args():
     p = argparse.ArgumentParser(description="PPO expert for LunarLander")
-    p.add_argument(
-        "--env", default="LunarLanderContinuous-v3", help="Gymnasium env id"
-    )
+    p.add_argument("--env", default="LunarLanderContinuous-v3", help="Gymnasium env id")
     p.add_argument(
         "--run-name",
         default=None,

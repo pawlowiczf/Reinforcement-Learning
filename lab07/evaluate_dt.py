@@ -24,9 +24,7 @@ def parse_args():
     p.add_argument(
         "--dataset-id", default=DATASET_ID, help="Minari dataset used to derive R̂₁"
     )
-    p.add_argument(
-        "--model-path", default=MODEL_PATH, help="Trained DT to load (.pth)"
-    )
+    p.add_argument("--model-path", default=MODEL_PATH, help="Trained DT to load (.pth)")
     p.add_argument("--env", default=ENV_ID, help="Gymnasium env id to play in")
     return p.parse_args()
 

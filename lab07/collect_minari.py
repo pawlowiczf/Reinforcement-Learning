@@ -27,9 +27,7 @@ from stable_baselines3 import PPO
 
 def parse_args():
     p = argparse.ArgumentParser(description="Collect PPO trajectories into Minari")
-    p.add_argument(
-        "--env", default="LunarLanderContinuous-v3", help="Gymnasium env id"
-    )
+    p.add_argument("--env", default="LunarLanderContinuous-v3", help="Gymnasium env id")
     p.add_argument(
         "--run-name", default=None, help="Run name of the model to load (no .zip)"
     )
