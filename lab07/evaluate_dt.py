@@ -72,3 +72,5 @@ if __name__ == "__main__":
     evaluate(args.dataset_id, args.model_path, args.env)
 
 # uv run python evaluate_dt.py --dataset-id lunarlander/ppo_beginner_100k-v0 --model-path output/dt/ppo_beginner_100k-v0.pth
+# uv run python evaluate_dt.py --dataset-id lunarlander/ppo_beginner_100k-v0 --model-path output/dt/ppo_beginner_100k-v0.pth
+# uv run python evaluate_dt.py --dataset-id lunarlander/ppo_expert_1000k-v0 --model-path output/dt/ppo_expert_1000k-v0.pth

@@ -6,6 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "gymnasium[box2d]",
+    "imageio>=2.37.3",
+    "imageio-ffmpeg>=0.6.0",
     "jax>=0.10.1",
     "minari>=0.5.3",
     "nanodt>=0.1.0",

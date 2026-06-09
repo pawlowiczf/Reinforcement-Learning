@@ -136,3 +136,4 @@ if __name__ == "__main__":
 # uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_100k_s0 --dataset-id lunarlander/ppo_beginner_100k-v0 --num-episodes 1000
 # uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_400k_s0 --dataset-id lunarlander/ppo_intermediate_400k-v0 --num-episodes 1000
 # uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_1000k_s0 --dataset-id lunarlander/ppo_expert_1000k-v0 --num-episodes 1000
+# uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_200k_s0 --dataset-id lunarlander/ppo_intermediate_200k-v0 --num-episodes 10000
