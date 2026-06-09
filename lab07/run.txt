@@ -1,0 +1,12 @@
+uv run python compare_dt.py                  # wszystkie poziomy, 20 epizodów
+uv run python compare_dt.py --levels expert  # jeden poziom
+uv run python compare_dt.py --episodes 50    # więcej epizodów = mniejszy szum
+
+uv run python record_video.py --level expert                 # output/videos/expert_dt.mp4
+uv run python record_video.py --level expert --which ppo      # oryginalny PPO
+uv run python record_video.py --level beginner --episodes 3   # 3 epizody w jednym klipie
+uv run python record_video.py --all                           # DT + PPO dla wszystkich poziomów
+
+uv run python record_video.py --level expert --target-return 100 --watch
+uv run python record_video.py --level expert --target-return 300 --watch
+uv run python record_video.py --level expert --target-return 600 --watch

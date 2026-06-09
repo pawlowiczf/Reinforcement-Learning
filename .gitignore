@@ -30,3 +30,6 @@ models/
 *.zip
 tb/
 logs/
+
+# Large generated datasets (regenerate with collect_minari.py)
+*.hdf5
