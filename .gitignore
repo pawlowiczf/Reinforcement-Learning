@@ -32,4 +32,5 @@ tb/
 logs/
 
 # Large generated datasets (regenerate with collect_minari.py)
+minari_datasets/
 *.hdf5
