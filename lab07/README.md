@@ -33,10 +33,10 @@ def train(env_id, timesteps, model_path, seed, tb_dir, run_name, n_envs):
 
 ### Zapisanie demonstrancji
 
-Do zapisania demonstrancji użyłem Minari. Jest to wygodny sposób na przechowywanie danych z demonstracjami, integruje się bezpośrednio z Gym. Kod do zapisu umieściłem w pliku `collect_minari.py`. Jest on także dość elastyczny, umożliwia zbieranie dowolnej liczby demonstrancji z różnych modeli. Przykładowe wywołanie to: `uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_100k_s0 --dataset-id lunarlander/ppo_beginner_100k-v0 --num-episodes 1000`, gdzie `run-name`to lokalizacja modelu PPO z katalogu `/models`, a `dataset-id` to nazwa zbioru pod jaką zapisać demonstrancje. Dla beginner, intermediate i expert zebrałem po 1000 epizodów, dla juniora było to 10_000. 
+Do zapisania demonstrancji użyłem Minari. Jest to wygodny sposób na przechowywanie danych z demonstracjami, integruje się bezpośrednio z Gym. Kod do zapisu umieściłem w pliku `collect_minari.py`. Jest on także dość elastyczny, umożliwia zbieranie dowolnej liczby demonstrancji z różnych modeli. Przykładowe wywołanie to: `uv run python collect_minari.py --run-name ppo_LunarLanderContinuous-v3_100k_s0 --dataset-id lunarlander/ppo_beginner_100k-v0 --num-episodes 1000`, gdzie `run-name` to lokalizacja modelu PPO w katalogu `/models`, a `dataset-id` to nazwa zbioru pod jaką zapisać demonstrancje. Dla beginner, intermediate i expert zebrałem po 1000 epizodów, dla juniora było to 10_000. 
 
 ### Trening Decision Transformera 
-
+Do treningu użyłem biblioteki NanoDTAgent, wzorowałem się na przykładach z repozytorium z katalogu `examples/`. Liczba iteracji wynosiła 200_000, użyłem także nieco zmienionego `reward_scale`. 
 ```py
 def train_dt(dataset_id, model_path):
     seed = 1234
@@ -106,12 +106,27 @@ def evaluate(dataset_id, model_path, env_id):
 
 Przygotowałem także (z pomocą AI) różne skrypty do uruchamiania i porównywania DT z bazowo wytrenowanym agentem przy pomocy PPO. Stworzyłem także skrypt do zapisywania filmików z epizodów. 
 
+Wywołanie `uv run python compare_dt.py --episodes 50` umożliwia porównanie wytrenowanego DT z bazowym agentem wytrenowanym przez PPO. 
 ```sh
 ┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━┓
 ┃ Level        ┃ Dataset (demos) ┃ PPO expert ┃ DT (ours) ┃ DT vs PPO ┃ DT solved% ┃
 ┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━┩
-│ beginner     │        16 ± 149 │   26 ± 167 │   3 ± 152 │       -23 │        25% │
-│ intermediate │        235 ± 58 │   255 ± 22 │  254 ± 23 │        -2 │       100% │
-│ expert       │        266 ± 20 │   267 ± 22 │  264 ± 23 │        -3 │       100% │
+│ beginner     │        16 ± 149 │   23 ± 157 │  15 ± 149 │        -8 │        20% │
+│ junior       │        226 ± 49 │   231 ± 43 │  227 ± 54 │        -4 │        88% │
+│ intermediate │        235 ± 58 │   238 ± 51 │  238 ± 53 │        -1 │        94% │
+│ expert       │        266 ± 20 │   269 ± 19 │  266 ± 20 │        -3 │       100% │
 └──────────────┴─────────────────┴────────────┴───────────┴───────────┴────────────┘
 ```
+
+Wnioski:
+- DT skutecznie imituje eksperta PPO. Na poziomach junior, intermediate i expert DT osiąga wyniki zbliżone do PPO (różnica 1-4 punkty), co stanowi solidny wynik dla podejścia offline RL. Na poziomie expert DT rozwiązuje 100% epizodów.
+- DT nie przekracza jakości danych treningowych. Zgodnie z oczekiwaniami dla modeli offline, DT nie jest w stanie przewyższyć agenta PPO. Wynika to z natury uczenia się przez imitację - model odtwarza wzorce z danych, nie eksploruje środowiska.
+
+Okazało się także, że warunkowanie, zmiana wartości return-to-go (RTG) nie działa - nie ma wpływu na wynik, nagrody w epizodzie. DT nauczył się ignorować token RTG, gdyż w danych prawie zawsze były wysokie nagrody. Model ekstrapoluje zachowanie eksperta niezależnie od podanego RTG. Jedynie zastanawiam się, co było powodem, dla którego RTG nie poprawił epizodów np. dla beginnera, którego odchylenie wartości nagród było duże.
+
+Podsumowując, wytrenowany Decision Transformer skutecznie dorównuje oryginalnemu agentowi PPO, na którego epizodach się uczył. Na poziomie expert, gdzie dane treningowe były wysokiej jakości i stabilne (266 ± 20), DT osiąga identyczną średnią nagrodę (266 ± 20) i ląduje skutecznie w 100% epizodów, co oznacza pełne dorównanie mistrzowi. Na poziomach junior i intermediate różnica względem eksperta PPO wynosi odpowiednio 4 i 1 punkt, co również można uznać za bardzo dobry wynik.
+Na poziomie beginner DT radzi sobie wyraźnie gorzej - rozwiązuje jedynie 20% epizodów. Wynika to z niskiej jakości i dużej niestabilności danych treningowych (16 ± 149), gdzie chaotyczne trajektorie utrudniają modelowi nauczenie się spójnej polityki.
+
+DT nie przekracza wyników PPO na żadnym poziomie, co jest oczekiwanym zachowaniem dla metod offline RL - model jest ograniczony jakością danych i nie eksploruje środowiska samodzielnie. Niemniej wyniki pokazują, że DT skutecznie odtwarza zachowanie demonstratora: na wysokiej jakości danych potrafi w pełni dorównać ekspertowi, który te dane wygenerował.
+
+![](output/compare_returns.png)

@@ -34,6 +34,11 @@ LEVELS = {
         "dt": "output/dt/ppo_beginner_100k-v0.pth",
         "ppo": "models/ppo_LunarLanderContinuous-v3_100k_s0",
     },
+    "junior": {
+        "dataset": "lunarlander/ppo_junior_200k-v0",
+        "dt": "output/dt/ppo_junior_200k-v0.pth",
+        "ppo": "models/ppo_LunarLanderContinuous-v3_200k_s0",   
+    },
     "intermediate": {
         "dataset": "lunarlander/ppo_intermediate_400k-v0",
         "dt": "output/dt/ppo_intermediate_400k-v0.pth",

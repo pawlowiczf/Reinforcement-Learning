@@ -26,6 +26,12 @@ def parse_args():
     )
     p.add_argument("--model-path", default=MODEL_PATH, help="Trained DT to load (.pth)")
     p.add_argument("--env", default=ENV_ID, help="Gymnasium env id to play in")
+    p.add_argument(
+        "--target-return",
+        type=float,
+        default=None,
+        help="Target return-to-go to condition on. If omitted, derived from the dataset.",
+    )
     return p.parse_args()
 
 
@@ -43,10 +49,13 @@ def target_return_from_dataset(dataset, top_frac=0.1):
     return float(top.mean())
 
 
-def evaluate(dataset_id, model_path, env_id):
-    dataset = minari.load_dataset(dataset_id)
-    target_return = target_return_from_dataset(dataset)
-    print(f"R̂₁ (mean return of top 10% trajectories) = {target_return:.1f}")
+def evaluate(dataset_id, model_path, env_id, target_return=None):
+    if target_return is None:
+        dataset = minari.load_dataset(dataset_id)
+        target_return = target_return_from_dataset(dataset)
+        print(f"R̂₁ (mean return of top 10% trajectories) = {target_return:.1f}")
+    else:
+        print(f"R̂₁ (user-specified target return) = {target_return:.1f}")
 
     env = gym.make(env_id)
     agent = NanoDTAgent.load(model_path)
@@ -69,8 +78,9 @@ def evaluate(dataset_id, model_path, env_id):
 
 if __name__ == "__main__":
     args = parse_args()
-    evaluate(args.dataset_id, args.model_path, args.env)
+    evaluate(args.dataset_id, args.model_path, args.env, args.target_return)
 
 # uv run python evaluate_dt.py --dataset-id lunarlander/ppo_beginner_100k-v0 --model-path output/dt/ppo_beginner_100k-v0.pth
 # uv run python evaluate_dt.py --dataset-id lunarlander/ppo_beginner_100k-v0 --model-path output/dt/ppo_beginner_100k-v0.pth
 # uv run python evaluate_dt.py --dataset-id lunarlander/ppo_expert_1000k-v0 --model-path output/dt/ppo_expert_1000k-v0.pth
+# uv run python evaluate_dt.py --dataset-id lunarlander/ppo_junior_200k-v0 --model-path output/dt/ppo_junior_200k-v0.pth --target-return 1
