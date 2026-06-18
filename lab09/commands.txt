@@ -1,0 +1,2 @@
+uv run python train.py --max-steps 300 --log-every 25 --name observe
+uv run tensorboard --logdir runs\000004_reward_no_repetition

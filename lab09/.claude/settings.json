@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(uv --version)",
+      "PowerShell(nvidia-smi --query-gpu=name --format=csv,noheader 2>$null)",
+      "PowerShell(uv pip show setuptools)",
+      "PowerShell(uv run python -c \"import pkg_resources; print\\('pkg_resources OK', pkg_resources.__file__\\)\")",
+      "PowerShell(uv add \"setuptools<81\")",
+      "PowerShell(uv run python -c \"import pkg_resources; print\\('pkg_resources OK'\\)\")",
+      "PowerShell(uv run tensorboard --version)",
+      "Bash(uv run --quiet python -c ' *)"
+    ]
+  }
+}

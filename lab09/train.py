@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainerCallback
 
 from data import build_dataset
-from rewards import reward_correctness, reward_vocab
+from rewards import reward_correctness, reward_vocab, reward_no_repetition
 from vocab import load_vocab, vocab_fraction
 
 MODEL_ID = "HuggingFaceTB/SmolLM2-135M-Instruct"
@@ -51,6 +51,11 @@ class ConversationLoggerCallback(TrainerCallback):
         "Why is the sky blue?",
         "What is 17 multiplied by 6?",
         "Who wrote Romeo and Juliet?",
+        "What is the largest planet in our solar system?",
+        "Why do leaves change color in autumn?",
+        "What is the chemical symbol for gold?",
+        "How many continents are there on Earth?",
+        "Who painted the Mona Lisa?",
     ]
 
     def __init__(
@@ -165,6 +170,13 @@ def parse_args():
         help="Number of training examples to use (default: 3000)",
     )
     p.add_argument(
+        "--max-steps",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Cap training at N optimizer steps (overrides the 3-epoch schedule)",
+    )
+    p.add_argument(
         "--log-every",
         type=int,
         default=50,
@@ -226,6 +238,9 @@ def main():
         )
         log_every = args.log_every
         n_train = args.n_train
+        if args.max_steps is not None:
+            grpo_params.pop("num_train_epochs")
+            grpo_params["max_steps"] = args.max_steps
 
     if args.name:
         suffix = args.name
