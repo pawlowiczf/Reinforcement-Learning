@@ -6,6 +6,8 @@ Algorytm TD(0) jest stosunkowo podobny do Monte Carlo (wykład wcześniejszy).
 
 ### TD(0) for estimating $v_\pi$
 
+TD(0) aktualizuje $V(S)$ po każdym kroku według wzoru $V(S) \leftarrow V(S) + \alpha[R + \gamma V(S') - V(S)]$, gdzie $R + \gamma V(S')$ to TD target, a różnica z $V(S)$ to TD error. W przeciwieństwie do MC, TD nie czeka na koniec epizodu i nie używa rzeczywistego zwrotu $G_t$, lecz szacuje go przez $V(S')$ (bootstraping). Dzięki temu działa online i ma niższą wariancję, kosztem wprowadzenia biasu.
+
 $$
 \delta_t = R_{t+1} + \gamma V(S_t+1) - V(S_t)
 $$
@@ -75,6 +77,10 @@ end for
 ### Q-learning
 Off-policy temporal difference control. Bezpośrednio aproksymuje optymalną politykę, niezależnie od tej, która obecnie wpływa na zachowanie agenta.
 
+$$
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha \left[ R_{t+1} + \gamma \max_a Q(S_{t+1}, a) - Q(S_t, A_t) \right]
+$$
+
 ### Sarsa z wartościami oczekiwanymi
 
 Stosować, gdy liczba akcji do wyboru w danym stanie nie jest zbyt duża, bo pod tych akcjach musimy całkować.
@@ -105,4 +111,8 @@ Problem z Q-learningiem: ten sam Q robi dwie rzeczy na raz - wybiera akcję oraz
 Nowy proces:
 1. Oceniamy politykę, taką jaka byłaby w oparciu o Q1. Mamy starą estymatę Q1 i robimy nową.
 2. Bootstraping robimy w oparciu o Q2
+
+Teoretycznie, problem ten pojawia się, gdy mamy losowe nagrody, np. pochodzące z jakiegoś rozkładu i te fałszywe nagrody nam naciekają.
+
+### N-krokowy TD
 

@@ -6,7 +6,7 @@ Monte Carlo dla problemów Markova.
 
 1. Opieramy się na kompletnch, ukończonych epizodach.
 
-### Predykcja wartościowania stanu w oparciu o pierwsze wizyty i podejście MC
+### Predykcja wartościowania stanu V(s) w oparciu o pierwsze wizyty i podejście MC
 First-visit MC prediction, for estimating $V \approx v_\pi$.
 
 Idziemy po epizodzie od końca do początku i sumujemy kolejne nagrody (zwrot). Będąc w czasie $t$, jeśli stan $s_t$ nie pojawia się we wcześniejszym ciągu $s_0, s_1, \ldots, s_{t-1}$, to dodaj całkowity zwrot do tablicy dla stanu $s_t$.
@@ -26,6 +26,9 @@ Q(s,a) \larr average(Returns(s, a)) \\
 \pi (s) \larr \argmax _a Q(s, a)
 $$
 
+On-policy first-visit MC control (for $\epsilon$-soft policies), estimates $\pi$.
+To samo, ale tworzona estymacja polityki ma dodawany czynnik losowy - inne akcje (oprócz tej z maksymalną wartości wartościowania) mają niezerowe prawdopodobieństwa wyboru.
+
 ### Predykcja wartościowania poza-polityką (off-policy)
 
 Chcemy estymować $v_\pi$ lub $q_\pi$, ale mamy do dyspozycji tylko epizody oparte o $b \neq \pi$. $b$ to przykładowo politka eksploracyjna ($\epsilon$-greedy), a $\pi$ to polityka zachłanna.
@@ -35,3 +38,9 @@ $$
 \to \\
 \mathbb{E} [\rho_{t:T-1} G_t | S_t] = v_\pi(S_t)
 $$
+
+### Zalety i wady
+
+Monte Carlo wymaga pełnych epizodów, co uniemożliwia zastosowanie w zadaniach ciągłych lub o bardzo długich epizodach. Zwrot $G_t$ jest sumą wielu losowych nagród, co prowadzi do wysokiej wariancji estymaty, szczególnie w długich epizodach. Propagacja informacji jest wolna: sygnał z końca epizodu dociera do wcześniejszych stanów dopiero po jego zakończeniu. Metoda wymaga również rozwiązania problemu eksploracji, gdyż deterministyczna polityka może nigdy nie odwiedzić wielu par $(s, a)$.
+
+Monte Carlo jest metodą bezmodelową (model-free) - nie wymaga znajomości dynamiki środowiska $P(s'|s,a)$. Estymata wartości jest nieobciążona (brak bias), ponieważ opiera się na rzeczywistych zwrotach $G_t$, a nie na estymacjach innych stanów. Poszczególne epizody są od siebie niezależne, co upraszcza analizę zbieżności.
